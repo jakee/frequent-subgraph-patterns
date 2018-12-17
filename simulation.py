@@ -4,7 +4,7 @@ import matplotlib.pyplot as plt
 
 from graph.util import make_edge
 
-from algorithms.incremental.exact_counting import IncrementalNaiveReservoirAlgorithm
+from algorithms.incremental.exact_counting import IncrementalExactCountingAlgorithm
 
 
 def generate_labeled_graph(N, p, L, Q):
@@ -63,6 +63,8 @@ def run_simulation(graph, k):
 def main():
     np.random.seed(42)
 
+    k = 4
+
     N = 10
     p = 0.25
 
@@ -72,7 +74,7 @@ def main():
     graph = generate_micro_labeled_graph()
     #graph = generate_labeled_graph(N, p, L_count, Q_count)
 
-    sim = run_simulation(graph, 4)
+    sim = run_simulation(graph, k)
 
     # output should look like this
     # k = 3: Counter({'221120': 2, '211210': 2, '211220': 1, '221121': 1})

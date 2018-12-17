@@ -1,7 +1,10 @@
 from itertools import combinations, product
 from collections import deque
 
-from .util import make_edge
+from graph.util import make_edge
+
+from util.set import flatten
+
 
 class SimpleGraph:
     adjacency_matrix = None
@@ -49,38 +52,7 @@ class SimpleGraph:
 
     def n_hop_neighborhood(self, source, n):
         if n > 0:
-            '''
-            # First, BFS to label the neighborhood of the node
-            # based on the number of hops it takes to
-            # reach the source
-
-            bfs_stack = deque([(source, 0)])
-            distances = {}
-
-            while len(bfs_stack) > 0:
-                u, dist = bfs_stack.popleft()
-
-                if u not in distances:
-                    distances[u] = dist
-
-                if dist < n:
-                    for v in self.neighbors(u):
-                        if v not in distances:
-                            bfs_stack.append((v, dist + 1))
-
-            while len(stack) > 0:
-                u, hops = stack.pop()
-
-                if n + 1 > len(hops):
-                    for v in self.neighbors(u):
-                        if v not in hops:
-                            stack.append((v, hops | set([v])))
-                else:
-                    # nth hop reached, commit the neighborhood
-                    neighborhoods.add(frozenset(hops))
-            '''
-
-            # Then, DFS to enumerate all [1...n] -hop neighborhoods
+            # DFS to enumerate obvious [1...n] -hop neighborhoods
             stack = [(source, set([source]))]
             m_hop_neighborhoods = {k: set() for k in range(1, n + 1)}
 
@@ -119,8 +91,26 @@ class SimpleGraph:
             return set([frozenset([source])])
 
 
+    def two_hop_neighborhood(self, source, through_nodes=None, exclude_nodes=set()):
+        one_hop_nodes = self.neighbors(source)
+        exclude_nodes = exclude_nodes | one_hop_nodes | set([source])
+
+        if through_nodes != None:
+            one_hop_nodes = one_hop_nodes & through_nodes
+
+        two_hop_dict = {}
+
+        for v in one_hop_nodes:
+            nbrs = self.neighbors(v)
+            for s in nbrs - exclude_nodes:
+                if s not in two_hop_dict:
+                    two_hop_dict[s] = set()
+                two_hop_dict[s].add(v)
+
+        return two_hop_dict
+
+
     def get_induced_edges(self, nodes):
-        print(nodes)
         edges = []
 
         # node pairs come out of combinations in sorted
