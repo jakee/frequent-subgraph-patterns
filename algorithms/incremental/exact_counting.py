@@ -7,7 +7,7 @@ from subgraph.pattern import canonical_label
 
 from util.set import flatten
 
-from algorithms.neighborhood_exploration.naive_until_quadruplet import addition_explore
+from algorithms.exploration.optimized_quadruplet import addition_explore
 
 class IncrementalExactCountingAlgorithm:
     k = 0

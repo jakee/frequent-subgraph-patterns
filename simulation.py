@@ -2,13 +2,17 @@ import numpy as np
 import networkx as nx
 import matplotlib.pyplot as plt
 
+import time
+from datetime import datetime, timedelta
+
 from graph.util import make_edge
 
 from algorithms.incremental.exact_counting import IncrementalExactCountingAlgorithm
+from algorithms.incremental.naive_reservoir import IncrementalNaiveReservoirAlgorithm
 
 
 def generate_labeled_graph(N, p, L, Q):
-    G = nx.fast_gnp_random_graph(N, p, seed=42)
+    G = nx.fast_gnp_random_graph(N, p)
 
     for node in G:
         G.nodes[node]['label'] = np.random.randint(1, L+1)
@@ -36,7 +40,7 @@ def generate_micro_labeled_graph():
 
     return G
 
-def run_simulation(graph, k):
+def run_simulation(simulator, graph):
     # get list of edges
     # permutate list of edges
     # add edges one by one
@@ -52,12 +56,20 @@ def run_simulation(graph, k):
 
     np.random.shuffle(data)
 
-    simulator = IncrementalExactCountingAlgorithm(k)
+    addition_durations = []
 
-    for edge in data:
+    start_time = time.time()
+
+    for i, edge in enumerate(data):
+        s_dt = datetime.now()
         simulator.add_edge(edge)
+        e_dt = datetime.now()
 
-    return simulator
+        addition_durations.append((e_dt - s_dt) / timedelta(microseconds=1))
+
+    end_time = time.time()
+
+    return end_time - start_time, addition_durations
 
 
 def main():
@@ -65,26 +77,72 @@ def main():
 
     k = 4
 
-    N = 10
+    N = 70
     p = 0.25
 
-    L_count = 3 # vertex labels
+    L_count = 2 # vertex labels
     Q_count = 2 # edge labels
 
-    graph = generate_micro_labeled_graph()
-    #graph = generate_labeled_graph(N, p, L_count, Q_count)
+    #graph = generate_micro_labeled_graph()
+    graph = generate_labeled_graph(N, p, L_count, Q_count)
 
-    sim = run_simulation(graph, k)
+    print("\nEXACT COUNTING\n")
+
+    ec_sim_durations = []
+    ec_edge_add_durations = []
+
+    for i in range(10):
+        sim = IncrementalExactCountingAlgorithm(k)
+        duration, durations = run_simulation(sim, graph)
+
+        print("The simulation ran for", duration, "seconds.")
+        print("Number of different patterns in sample:", len((+sim.patterns).keys()))
+        print("Number of different patterns in sample:", len(sim.patterns.keys()), "(incl. < 0 values)")
+        print("Total number of subgraphs in sample:", sum((+sim.patterns).values()))
+        print("Total number of subgraphs in sample:", sum(sim.patterns.values()), "(incl. < 0 values)")
+
+        ec_sim_durations.append(duration)
+        ec_edge_add_durations.append(durations)
+
+    print("The simulations ran for on avg.", np.mean(ec_sim_durations), "seconds.")
+
+    print("\nRESERVOIR SAMPLING\n")
+
+    rs_sim_durations = []
+    rs_edge_add_durations = []
+
+    for i in range(10):
+        sim = IncrementalNaiveReservoirAlgorithm(1529, k) #324938
+        duration, durations = run_simulation(sim, graph)
+
+        print("The simulation ran for", duration, "seconds.")
+        print("Number of different patterns in sample:", len((+sim.patterns).keys()))
+        print("Number of different patterns in sample:", len(sim.patterns.keys()), "(incl. < 0 values)")
+        print("Total number of subgraphs in sample:", sum((+sim.patterns).values()))
+        print("Total number of subgraphs in sample:", sum(sim.patterns.values()), "(incl. < 0 values)")
+
+        rs_sim_durations.append(duration)
+        rs_edge_add_durations.append(durations)
+
+    print("The simulations ran for on avg.", np.mean(rs_sim_durations), "seconds.")
 
     # output should look like this
     # k = 3: Counter({'221120': 2, '211210': 2, '211220': 1, '221121': 1})
     # k = 4: Counter({'2211112200': 2, '2112220100': 1, '2111220100': 1, '2211120020': 0})
-    print(sim.patterns)
+    #print(sim.patterns)
 
-    node_colors = [label for u, label in graph.nodes.data('label')]
-    edge_colors = [label for u, v, label in graph.edges.data('label')]
+    #node_colors = [label for u, label in graph.nodes.data('label')]
+    #edge_colors = [label for u, v, label in graph.edges.data('label')]
 
-    nx.draw_circular(graph, node_color=node_colors, cmap=plt.get_cmap('Dark2'), edge_color=edge_colors, edge_cmap=plt.get_cmap('Set1'), with_labels=True)
+    #nx.draw_circular(graph, node_color=node_colors, cmap=plt.get_cmap('Dark2'), edge_color=edge_colors, edge_cmap=plt.get_cmap('Set1'), with_labels=True)
+    #plt.show()
+
+    fig = plt.figure()
+    ax = fig.add_subplot(111)
+
+    ax.plot(np.arange(len(ec_edge_add_durations[0])), np.mean(np.asarray(ec_edge_add_durations), axis=0))
+    ax.plot(np.arange(len(rs_edge_add_durations[0])), np.mean(np.asarray(rs_edge_add_durations), axis=0))
+
     plt.show()
 
 

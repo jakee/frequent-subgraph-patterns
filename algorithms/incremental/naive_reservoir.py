@@ -1,3 +1,5 @@
+import numpy as np
+
 from collections import Counter
 
 from graph.simple_graph import SimpleGraph
@@ -6,6 +8,8 @@ from subgraph.util import make_subgraph
 from subgraph.pattern import canonical_label
 
 from sampling.subgraph_reservoir import SubgraphReservoir
+
+from algorithms.exploration.optimized_quadruplet import get_new_subgraphs
 
 from util.set import flatten
 
@@ -20,6 +24,9 @@ class IncrementalNaiveReservoirAlgorithm:
 
     def __init__(self, M, k=3):
         self.k = k
+        self.M = M
+        self.N = 0
+
         self.graph = SimpleGraph()
         self.patterns = Counter()
         self.reservoir = SubgraphReservoir()
@@ -32,63 +39,19 @@ class IncrementalNaiveReservoirAlgorithm:
         u = edge.get_u()
         v = edge.get_v()
 
-        # each subgraph is either a new addition or replaces an existing subgraph
-        additions = set()
-        replacements = set()
+        # replace update all existing subgraphs with u and v in the reservoir
+        for s in self.reservoir.get_common_subgraphs(u, v):
+            self.remove_subgraph_from_reservoir(s)
+            self.add_subgraph_to_reservoir(make_subgraph(s.nodes, s.edges+(edge,)))
 
-        for h in range(self.k - 2 + 1):
-            j = self.k - 2 - h
+        # find new subgraph candidates for the reservoir
+        additions = get_new_subgraphs(self.graph, u, v, self.k)
 
-            u_neighborhoods = self.graph.n_hop_neighborhood(u, h)
-            v_neighborhoods = self.graph.n_hop_neighborhood(v, j)
-
-            # the common nodes in the neighborhoods
-            if h < j:
-                u_neighborhoods_ext = self.graph.n_hop_neighborhood(u, h + 1)
-                common = flatten(u_neighborhoods_ext) & flatten(v_neighborhoods)
-            else:
-                common = flatten(u_neighborhoods) & flatten(v_neighborhoods)
-
-            common -= set([u, v])
-
-            for u_neighborhood in u_neighborhoods:
-                for v_neighborhood in v_neighborhoods:
-                    # only consider disjoint neighborhoods
-                    # as their union will have size k
-                    if u_neighborhood.isdisjoint(v_neighborhood):
-                        neighborhood = frozenset(u_neighborhood | v_neighborhood)
-
-                        if (neighborhood not in additions) and \
-                           (neighborhood not in replacements):
-                            # only consider neighborhoods once
-
-                            if common.isdisjoint(neighborhood):
-                                # combined neighborhoods contain no common nodes
-                                # add the newly created subgraph
-                                additions.add(neighborhood)
-                            else:
-                                # combined neighborhoods contain common nodes
-                                # replace the existing subgraph
-                                replacements.add(neighborhood)
-
+        # perform reservoir sampling for each new subgraph candidate
         for nodes in additions:
-            # collect the induced subgraph after addition of edge
-            # add that subgraph
             edges = self.graph.get_induced_edges(nodes)
             subgraph = make_subgraph(nodes, edges+[edge])
             self.add_subgraph(subgraph)
-
-        for nodes in replacements:
-            # collect the induced subgraph with nodes
-            # remove that subgraph
-            # update the subgraph by adding edge
-            # add the updated subgraph
-            edges = self.graph.get_induced_edges(nodes)
-            existing_subgraph = make_subgraph(nodes, edges)
-
-            if existing_subgraph in self.reservoir:
-                self.remove_subgraph_from_sample(existing_subgraph)
-                self.add_subgraph_to_sample(make_subgraph(nodes, edges+[edge]))
 
         self.graph.add_edge(edge)
 
@@ -96,7 +59,7 @@ class IncrementalNaiveReservoirAlgorithm:
 
 
     def add_subgraph(self, subgraph):
-        self.N++
+        self.N += 1
 
         success = False
 
@@ -104,17 +67,17 @@ class IncrementalNaiveReservoirAlgorithm:
             success = True
         elif np.random.rand() < (self.M / float(self.N)):
             success = True
-            self.remove_subgraph(self.reservoir.random())
+            self.remove_subgraph_from_reservoir(self.reservoir.random())
 
         if success:
-            self.add_subgraph_to_sample(subgraph)
+            self.add_subgraph_to_reservoir(subgraph)
 
 
-    def add_subgraph_to_sample(self, subgraph):
-        self.reservoir.remove(subgraph)
-        self.patterns.subtract([canonical_label(subgraph)])
+    def add_subgraph_to_reservoir(self, subgraph):
+        self.reservoir.add(subgraph)
+        self.patterns.update([canonical_label(subgraph)])
 
 
-    def remove_subgraph_from_sample(self, subgraph):
+    def remove_subgraph_from_reservoir(self, subgraph):
         self.reservoir.remove(subgraph)
         self.patterns.subtract([canonical_label(subgraph)])
