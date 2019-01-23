@@ -14,10 +14,12 @@ class IncrementalExactCountingAlgorithm:
     graph = None
     patterns = None
 
+
     def __init__(self, k=3):
         self.k = k
         self.graph = SimpleGraph()
         self.patterns = Counter()
+
 
     def add_edge(self, edge):
         if edge in self.graph:
@@ -51,6 +53,7 @@ class IncrementalExactCountingAlgorithm:
         self.graph.add_edge(edge)
 
         return True
+
 
     def add_subgraph(self, subgraph):
         self.patterns.update([canonical_label(subgraph)])
