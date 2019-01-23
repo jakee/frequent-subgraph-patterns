@@ -9,6 +9,7 @@ from graph.util import make_edge
 
 from algorithms.incremental.exact_counting import IncrementalExactCountingAlgorithm
 from algorithms.incremental.naive_reservoir import IncrementalNaiveReservoirAlgorithm
+from algorithms.incremental.optimized_reservoir import IncerementalOptimizedReservoirAlgorithm
 
 
 def generate_labeled_graph(N, p, L, Q):
@@ -86,6 +87,7 @@ def main():
     #graph = generate_micro_labeled_graph()
     graph = generate_labeled_graph(N, p, L_count, Q_count)
 
+    '''
     print("\nEXACT COUNTING\n")
 
     ec_sim_durations = []
@@ -105,11 +107,12 @@ def main():
         ec_edge_add_durations.append(durations)
 
     print("The simulations ran for on avg.", np.mean(ec_sim_durations), "seconds.")
+    '''
 
-    print("\nRESERVOIR SAMPLING\n")
+    print("\nNAIVE RESERVOIR SAMPLING\n")
 
-    rs_sim_durations = []
-    rs_edge_add_durations = []
+    nrs_sim_durations = []
+    nrs_edge_add_durations = []
 
     for i in range(10):
         sim = IncrementalNaiveReservoirAlgorithm(1529, k) #324938
@@ -121,10 +124,30 @@ def main():
         print("Total number of subgraphs in sample:", sum((+sim.patterns).values()))
         print("Total number of subgraphs in sample:", sum(sim.patterns.values()), "(incl. < 0 values)")
 
-        rs_sim_durations.append(duration)
-        rs_edge_add_durations.append(durations)
+        nrs_sim_durations.append(duration)
+        nrs_edge_add_durations.append(durations)
 
-    print("The simulations ran for on avg.", np.mean(rs_sim_durations), "seconds.")
+    print("The simulations ran for on avg.", np.mean(nrs_sim_durations), "seconds.")
+
+    print("\nOPTIMIZED RESERVOIR SAMPLING\n")
+
+    ors_sim_durations = []
+    ors_edge_add_durations = []
+
+    for i in range(10):
+        sim = IncerementalOptimizedReservoirAlgorithm(1529, k) #324938
+        duration, durations = run_simulation(sim, graph)
+
+        print("The simulation ran for", duration, "seconds.")
+        print("Number of different patterns in sample:", len((+sim.patterns).keys()))
+        print("Number of different patterns in sample:", len(sim.patterns.keys()), "(incl. < 0 values)")
+        print("Total number of subgraphs in sample:", sum((+sim.patterns).values()))
+        print("Total number of subgraphs in sample:", sum(sim.patterns.values()), "(incl. < 0 values)")
+
+        ors_sim_durations.append(duration)
+        ors_edge_add_durations.append(durations)
+
+    print("\nThe simulations ran for on avg.", np.mean(ors_sim_durations), "seconds.")
 
     # output should look like this
     # k = 3: Counter({'221120': 2, '211210': 2, '211220': 1, '221121': 1})
@@ -140,8 +163,9 @@ def main():
     fig = plt.figure()
     ax = fig.add_subplot(111)
 
-    ax.plot(np.arange(len(ec_edge_add_durations[0])), np.mean(np.asarray(ec_edge_add_durations), axis=0))
-    ax.plot(np.arange(len(rs_edge_add_durations[0])), np.mean(np.asarray(rs_edge_add_durations), axis=0))
+    #ax.plot(np.arange(len(ec_edge_add_durations[0])), np.mean(np.asarray(ec_edge_add_durations), axis=0))
+    ax.plot(np.arange(len(nrs_edge_add_durations[0])), np.mean(np.asarray(nrs_edge_add_durations), axis=0))
+    ax.plot(np.arange(len(nrs_edge_add_durations[0])), np.mean(np.asarray(ors_edge_add_durations), axis=0))
 
     plt.show()
 
