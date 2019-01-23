@@ -57,20 +57,14 @@ def run_simulation(simulator, graph):
 
     np.random.shuffle(data)
 
-    addition_durations = []
-
     start_time = time.time()
 
     for i, edge in enumerate(data):
-        s_dt = datetime.now()
         simulator.add_edge(edge)
-        e_dt = datetime.now()
-
-        addition_durations.append((e_dt - s_dt) / timedelta(microseconds=1))
 
     end_time = time.time()
 
-    return end_time - start_time, addition_durations
+    return end_time - start_time
 
 
 def main():
@@ -113,10 +107,15 @@ def main():
 
     nrs_sim_durations = []
     nrs_edge_add_durations = []
+    nrs_a_durations = []
+    nrs_r_durations = []
+    nrs_n_subgraphs = []
+    nrs_i_subgraphs = []
+    nrs_reservoir_full = []
 
     for i in range(10):
         sim = IncrementalNaiveReservoirAlgorithm(1529, k) #324938
-        duration, durations = run_simulation(sim, graph)
+        duration = run_simulation(sim, graph)
 
         print("The simulation ran for", duration, "seconds.")
         print("Number of different patterns in sample:", len((+sim.patterns).keys()))
@@ -125,10 +124,16 @@ def main():
         print("Total number of subgraphs in sample:", sum(sim.patterns.values()), "(incl. < 0 values)")
 
         nrs_sim_durations.append(duration)
-        nrs_edge_add_durations.append(durations)
+        nrs_edge_add_durations.append(sim.metrics.extract('edge_add_ms'))
+        nrs_a_durations.append(sim.metrics.extract('subgraph_add_ms'))
+        nrs_r_durations.append(sim.metrics.extract('subgraph_replace_ms'))
+        nrs_n_subgraphs.append(sim.metrics.extract('new_subgraph_count'))
+        nrs_i_subgraphs.append(sim.metrics.extract('included_subgraph_count'))
+        nrs_reservoir_full.append(sim.metrics.extract('reservoir_full_bool'))
 
     print("The simulations ran for on avg.", np.mean(nrs_sim_durations), "seconds.")
 
+    '''
     print("\nOPTIMIZED RESERVOIR SAMPLING\n")
 
     ors_sim_durations = []
@@ -148,6 +153,7 @@ def main():
         ors_edge_add_durations.append(durations)
 
     print("\nThe simulations ran for on avg.", np.mean(ors_sim_durations), "seconds.")
+    '''
 
     # output should look like this
     # k = 3: Counter({'221120': 2, '211210': 2, '211220': 1, '221121': 1})
@@ -160,12 +166,28 @@ def main():
     #nx.draw_circular(graph, node_color=node_colors, cmap=plt.get_cmap('Dark2'), edge_color=edge_colors, edge_cmap=plt.get_cmap('Set1'), with_labels=True)
     #plt.show()
 
+    reservoir_full_at = np.count_nonzero(np.mean(np.asarray(nrs_reservoir_full), axis=0) < 0.5)
+
+
     fig = plt.figure()
-    ax = fig.add_subplot(111)
+    ax = fig.add_subplot(311)
 
     #ax.plot(np.arange(len(ec_edge_add_durations[0])), np.mean(np.asarray(ec_edge_add_durations), axis=0))
     ax.plot(np.arange(len(nrs_edge_add_durations[0])), np.mean(np.asarray(nrs_edge_add_durations), axis=0))
-    ax.plot(np.arange(len(nrs_edge_add_durations[0])), np.mean(np.asarray(ors_edge_add_durations), axis=0))
+    ax.axvline(reservoir_full_at, color='r', alpha=0.6)
+    plt.title("edge addition duration")
+    #ax.plot(np.arange(len(nrs_edge_add_durations[0])), np.mean(np.asarray(ors_edge_add_durations), axis=0))
+
+    ax = fig.add_subplot(312)
+    ax.stackplot(np.arange(len(nrs_edge_add_durations[0])), np.mean(np.asarray(nrs_a_durations), axis=0), np.mean(np.asarray(nrs_r_durations), axis=0), labels=['addition', 'replacement'])
+    ax.axvline(reservoir_full_at, color='r', alpha=0.6)
+    plt.title("subgraph add and replacement durations")
+    plt.legend()
+
+    ax = fig.add_subplot(313)
+    ax.plot(np.arange(len(nrs_edge_add_durations[0])), np.mean(np.asarray(nrs_i_subgraphs), axis=0) / np.mean(np.asarray(nrs_n_subgraphs), axis=0))
+    ax.axvline(reservoir_full_at, color='r', alpha=0.6)
+    plt.title("ratio of included subgraphs")
 
     plt.show()
 
