@@ -20,7 +20,7 @@ class IncerementalOptimizedReservoirAlgorithm:
     k = None
     M = None # reservoir size
     N = None # number of subgraphs seen
-    s = None # sum of surplus subgraps skipped last iteration
+    s = None # number of surplus subgraps to skip this iteration
 
     graph = None
     patterns = None
@@ -56,25 +56,29 @@ class IncerementalOptimizedReservoirAlgorithm:
         subgraph_candidates = list(get_new_subgraphs(self.graph, u, v, self.k))
 
         W = len(subgraph_candidates)
-        I = 0
+        I = 0 # number of subgraph candidates to include in sample
 
         if len(self.reservoir) < self.M:
+            # if the reservoir is not full,
+            # we must include the next M - N subgraphs
             I = min(W, self.M - len(self.reservoir))
             self.s = I
             self.N += I
 
+        # determine the number of candidates I to include in the sample
         while self.s < W:
             I += 1
             Z_rs = self.skip_rs.apply(self.N)
             self.N += Z_rs + 1
-            self.s += + Z_rs + 1
+            self.s += Z_rs + 1
 
+        # sample I subgraphs from the W candidates
         if I < W:
             additions = random.sample(subgraph_candidates, I)
         else:
             additions = subgraph_candidates
 
-        # perform reservoir sampling for each new subgraph candidate
+        # add all sampled subgraphs
         for nodes in additions:
             edges = self.graph.get_induced_edges(nodes)
             subgraph = make_subgraph(nodes, edges+[edge])
@@ -87,7 +91,7 @@ class IncerementalOptimizedReservoirAlgorithm:
 
 
     def add_subgraph(self, subgraph):
-        if len(self.reservoir) == self.M:
+        if len(self.reservoir) >= self.M:
             self.remove_subgraph_from_reservoir(self.reservoir.random())
 
         self.add_subgraph_to_reservoir(subgraph)
