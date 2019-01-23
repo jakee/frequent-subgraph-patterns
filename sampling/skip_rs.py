@@ -2,7 +2,7 @@ import numpy as np
 
 # magic number used by Vitter in determining when to use
 # Algorithm X over Algorithm Z
-UPPERCASE_T 22.0
+UPPERCASE_T = 22.0
 
 class SkipRS:
     w = None
@@ -10,11 +10,11 @@ class SkipRS:
 
     def __init__(self, n):
         self.n = float(n)
-        self.w = np.exp(-np.log(np.random.rand() / n))
+        self.w = np.exp(-np.log(np.random.rand()) / n)
 
 
     def apply(self, t):
-        if t <= UPPERCASE_T * n:
+        if t <= UPPERCASE_T * self.n:
             return algorithm_x(t, self.n)
         else:
             S, W = algorithm_z(t, self.n, self.w)
@@ -45,7 +45,7 @@ def algorithm_x(t, n):
     while quot > V:
         S = S + 1
         t = t + 1
-        quot = quot * (t - n / float(t))
+        quot = quot * ((t - n) / float(t))
 
     return S
 
@@ -75,7 +75,7 @@ def algorithm_z(t, n, w):
 
         # Test in U <= h(S)/cg(X) in the manner of (6.3)
         tmp = (t + 1) / term
-        lhs = np.exp(np.log(((U * tmp * tmp) * (term + S)) / (t + X)) / n)
+        lhs = np.exp(np.log(((U * tmp * tmp) * (term + S)) / float(t + X)) / n)
         rhs = (((t + X) / (term + S)) * term) / float(t)
 
         if lhs <= rhs:
@@ -83,11 +83,11 @@ def algorithm_z(t, n, w):
             break
 
         # Test if U <= f(S)/cg(X)
-        y = (((U * (t + 1)) / term) * (t + S + 1)) / (t + X)
+        y = (((U * (t + 1)) / term) * (t + S + 1)) / float(t + X)
 
         if n < S:
             denom = t
-            numer_lim = term + S
+            numer_lim = int(term) + S
         else:
             denom = t - n + S
             numer_lim = t + 1
@@ -97,9 +97,9 @@ def algorithm_z(t, n, w):
             denom = denom - 1
 
         # generate W in advance 
-        W = np.exp(-np.log(np.random.rand() / n))
+        W = np.exp(-np.log(np.random.rand()) / n)
 
-        if np.exp(np.log(y) / n) <= (t + X) / t:
+        if np.exp(np.log(y) / n) <= (t + X) / float(t):
             break
 
     return S, W
