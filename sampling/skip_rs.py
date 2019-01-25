@@ -14,12 +14,16 @@ class SkipRS:
 
 
     def apply(self, t):
-        if t <= UPPERCASE_T * self.n:
-            return algorithm_x(t, self.n)
-        else:
+        if self.is_threshold_reached(t):
             S, W = algorithm_z(t, self.n, self.w)
             self.w = W
             return S
+        else:
+            return algorithm_x(t, self.n)
+
+
+    def is_threshold_reached(self, t):
+        return t > UPPERCASE_T * self.n
 
 
 def algorithm_x(t, n):
@@ -40,7 +44,7 @@ def algorithm_x(t, n):
     # num = t - n always in Vitter's pseudocode
     # as Algorithm X is only used to process
     # records in the interval [n, T*n] sequentially
-    quot = t - n / float(t)
+    quot = (t - n) / float(t)
 
     while quot > V:
         S = S + 1
