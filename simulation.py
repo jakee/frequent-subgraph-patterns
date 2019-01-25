@@ -81,7 +81,6 @@ def main():
     #graph = generate_micro_labeled_graph()
     graph = generate_labeled_graph(N, p, L_count, Q_count)
 
-    '''
     print("\nEXACT COUNTING\n")
 
     ec_sim_durations = []
@@ -89,19 +88,17 @@ def main():
 
     for i in range(10):
         sim = IncrementalExactCountingAlgorithm(k)
-        duration, durations = run_simulation(sim, graph)
+        duration = run_simulation(sim, graph)
 
         print("The simulation ran for", duration, "seconds.")
         print("Number of different patterns in sample:", len((+sim.patterns).keys()))
-        print("Number of different patterns in sample:", len(sim.patterns.keys()), "(incl. < 0 values)")
         print("Total number of subgraphs in sample:", sum((+sim.patterns).values()))
-        print("Total number of subgraphs in sample:", sum(sim.patterns.values()), "(incl. < 0 values)")
 
         ec_sim_durations.append(duration)
-        ec_edge_add_durations.append(durations)
+        ec_edge_add_durations.append(sim.metrics.extract('edge_add_ms'))
 
     print("The simulations ran for on avg.", np.mean(ec_sim_durations), "seconds.")
-    '''
+
 
     print("\nNAIVE RESERVOIR SAMPLING\n")
 
@@ -119,9 +116,7 @@ def main():
 
         print("The simulation ran for", duration, "seconds.")
         print("Number of different patterns in sample:", len((+sim.patterns).keys()))
-        print("Number of different patterns in sample:", len(sim.patterns.keys()), "(incl. < 0 values)")
         print("Total number of subgraphs in sample:", sum((+sim.patterns).values()))
-        print("Total number of subgraphs in sample:", sum(sim.patterns.values()), "(incl. < 0 values)")
 
         nrs_sim_durations.append(duration)
         nrs_edge_add_durations.append(sim.metrics.extract('edge_add_ms'))
@@ -133,61 +128,99 @@ def main():
 
     print("The simulations ran for on avg.", np.mean(nrs_sim_durations), "seconds.")
 
-    '''
+
     print("\nOPTIMIZED RESERVOIR SAMPLING\n")
 
     ors_sim_durations = []
     ors_edge_add_durations = []
+    ors_a_durations = []
+    ors_r_durations = []
+    ors_n_subgraphs = []
+    ors_i_subgraphs = []
+    ors_reservoir_full = []
+    ors_skip_thresh = []
 
     for i in range(10):
         sim = IncerementalOptimizedReservoirAlgorithm(1529, k) #324938
-        duration, durations = run_simulation(sim, graph)
+        duration = run_simulation(sim, graph)
 
         print("The simulation ran for", duration, "seconds.")
         print("Number of different patterns in sample:", len((+sim.patterns).keys()))
-        print("Number of different patterns in sample:", len(sim.patterns.keys()), "(incl. < 0 values)")
         print("Total number of subgraphs in sample:", sum((+sim.patterns).values()))
-        print("Total number of subgraphs in sample:", sum(sim.patterns.values()), "(incl. < 0 values)")
 
         ors_sim_durations.append(duration)
-        ors_edge_add_durations.append(durations)
+        ors_edge_add_durations.append(sim.metrics.extract('edge_add_ms'))
+        ors_a_durations.append(sim.metrics.extract('subgraph_add_ms'))
+        ors_r_durations.append(sim.metrics.extract('subgraph_replace_ms'))
+        ors_n_subgraphs.append(sim.metrics.extract('new_subgraph_count'))
+        ors_i_subgraphs.append(sim.metrics.extract('included_subgraph_count'))
+        ors_reservoir_full.append(sim.metrics.extract('reservoir_full_bool'))
+        ors_skip_thresh.append(sim.metrics.extract('skiprs_treshold_bool'))
 
     print("\nThe simulations ran for on avg.", np.mean(ors_sim_durations), "seconds.")
-    '''
 
-    # output should look like this
-    # k = 3: Counter({'221120': 2, '211210': 2, '211220': 1, '221121': 1})
-    # k = 4: Counter({'2211112200': 2, '2112220100': 1, '2111220100': 1, '2211120020': 0})
-    #print(sim.patterns)
 
-    #node_colors = [label for u, label in graph.nodes.data('label')]
-    #edge_colors = [label for u, v, label in graph.edges.data('label')]
+    fig = plt.figure()
+    ax = fig.add_subplot(111)
+    ax.plot(np.arange(len(ec_edge_add_durations[0])), np.mean(np.asarray(ec_edge_add_durations), axis=0), label="ec")
+    ax.plot(np.arange(len(nrs_edge_add_durations[0])), np.mean(np.asarray(nrs_edge_add_durations), axis=0), label="naive rs")
+    ax.plot(np.arange(len(ors_edge_add_durations[0])), np.mean(np.asarray(ors_edge_add_durations), axis=0), label="optimized rs")
+    plt.title("edge addition durations, k="+str(k))
+    plt.show()
 
-    #nx.draw_circular(graph, node_color=node_colors, cmap=plt.get_cmap('Dark2'), edge_color=edge_colors, edge_cmap=plt.get_cmap('Set1'), with_labels=True)
-    #plt.show()
 
-    reservoir_full_at = np.count_nonzero(np.mean(np.asarray(nrs_reservoir_full), axis=0) < 0.5)
-
+    nrs_reservoir_full_at = np.count_nonzero(np.mean(np.asarray(nrs_reservoir_full), axis=0) < 0.2)
 
     fig = plt.figure()
     ax = fig.add_subplot(311)
 
     #ax.plot(np.arange(len(ec_edge_add_durations[0])), np.mean(np.asarray(ec_edge_add_durations), axis=0))
     ax.plot(np.arange(len(nrs_edge_add_durations[0])), np.mean(np.asarray(nrs_edge_add_durations), axis=0))
-    ax.axvline(reservoir_full_at, color='r', alpha=0.6)
+    ax.axvline(nrs_reservoir_full_at, color='r', alpha=0.6)
     plt.title("edge addition duration")
     #ax.plot(np.arange(len(nrs_edge_add_durations[0])), np.mean(np.asarray(ors_edge_add_durations), axis=0))
 
     ax = fig.add_subplot(312)
     ax.stackplot(np.arange(len(nrs_edge_add_durations[0])), np.mean(np.asarray(nrs_a_durations), axis=0), np.mean(np.asarray(nrs_r_durations), axis=0), labels=['addition', 'replacement'])
-    ax.axvline(reservoir_full_at, color='r', alpha=0.6)
+    ax.axvline(nrs_reservoir_full_at, color='r', alpha=0.6)
     plt.title("subgraph add and replacement durations")
     plt.legend()
 
     ax = fig.add_subplot(313)
     ax.plot(np.arange(len(nrs_edge_add_durations[0])), np.mean(np.asarray(nrs_i_subgraphs), axis=0) / np.mean(np.asarray(nrs_n_subgraphs), axis=0))
-    ax.axvline(reservoir_full_at, color='r', alpha=0.6)
+    ax.axvline(nrs_reservoir_full_at, color='r', alpha=0.6)
     plt.title("ratio of included subgraphs")
+
+    fig.suptitle('Incremental Stream, Naive Reservoir Sampling, k='+str(k), fontsize=16)
+
+    plt.show()
+
+
+    ors_reservoir_full_at = np.count_nonzero(np.mean(np.asarray(ors_reservoir_full), axis=0) < 0.2)
+    ors_threshold_reached_at = np.count_nonzero(np.mean(np.asarray(ors_skip_thresh), axis=0) < 0.2)
+
+    fig = plt.figure()
+    ax = fig.add_subplot(311)
+
+    ax.plot(np.arange(len(ors_edge_add_durations[0])), np.mean(np.asarray(ors_edge_add_durations), axis=0))
+    ax.axvline(ors_reservoir_full_at, color='r', alpha=0.6)
+    ax.axvline(ors_threshold_reached_at, color='g', alpha=0.6)
+    plt.title("edge addition duration")
+
+    ax = fig.add_subplot(312)
+    ax.stackplot(np.arange(len(ors_edge_add_durations[0])), np.mean(np.asarray(ors_a_durations), axis=0), np.mean(np.asarray(ors_r_durations), axis=0), labels=['addition', 'replacement'])
+    ax.axvline(ors_reservoir_full_at, color='r', alpha=0.6)
+    ax.axvline(ors_threshold_reached_at, color='g', alpha=0.6)
+    plt.title("subgraph add and replacement durations")
+    plt.legend()
+
+    ax = fig.add_subplot(313)
+    ax.plot(np.arange(len(ors_edge_add_durations[0])), np.mean(np.asarray(ors_i_subgraphs), axis=0) / np.mean(np.asarray(ors_n_subgraphs), axis=0))
+    ax.axvline(ors_reservoir_full_at, color='r', alpha=0.6)
+    ax.axvline(ors_threshold_reached_at, color='g', alpha=0.6)
+    plt.title("ratio of included subgraphs")
+
+    fig.suptitle('Incremental Stream, Optimized Reservoir Sampling, k='+str(k), fontsize=16)
 
     plt.show()
 

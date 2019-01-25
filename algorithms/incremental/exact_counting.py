@@ -1,11 +1,14 @@
 from collections import Counter
 
+from datetime import datetime, timedelta
+
 from graph.simple_graph import SimpleGraph
 
 from subgraph.util import make_subgraph
 from subgraph.pattern import canonical_label
 
 from util.set import flatten
+from util.metrics import MetricStore
 
 from algorithms.exploration.optimized_quadruplet import addition_explore
 
@@ -13,17 +16,21 @@ class IncrementalExactCountingAlgorithm:
     k = 0
     graph = None
     patterns = None
+    metrics = None
 
 
     def __init__(self, k=3):
         self.k = k
         self.graph = SimpleGraph()
         self.patterns = Counter()
+        self.metrics = MetricStore('edge_add_ms')
 
 
     def add_edge(self, edge):
         if edge in self.graph:
             return False
+
+        e_add_start = datetime.now()
 
         u = edge.get_u()
         v = edge.get_v()
@@ -51,6 +58,10 @@ class IncrementalExactCountingAlgorithm:
             self.add_subgraph(updated_subgraph)
 
         self.graph.add_edge(edge)
+
+        e_add_end = datetime.now()
+        ms = timedelta(microseconds=1)
+        self.metrics.record('edge_add_ms', (e_add_end - e_add_start) / ms)
 
         return True
 
