@@ -17,10 +17,10 @@ def get_new_subgraphs(graph, u, v, k=4):
 
     # type A1 new subgraphs
     if len(u_own) > 1:
-        subgraphs.update([frozenset([u,v,n1,n2]) for n1,n2 in combinations(u_own, 2)])
+        subgraphs.update(frozenset([u,v,n1,n2]) for n1,n2 in combinations(u_own, 2))
 
     if len(v_own) > 1:
-        subgraphs.update([frozenset([u,v,n1,n2]) for n1,n2 in combinations(v_own, 2)])
+        subgraphs.update(frozenset([u,v,n1,n2]) for n1,n2 in combinations(v_own, 2))
 
 
     u_own_two_hop_dict = graph.two_hop_neighborhood(u, u_own)
@@ -32,10 +32,10 @@ def get_new_subgraphs(graph, u, v, k=4):
 
     # type A2 new subgraphs
     if len(u_own_two_hop) > 0:
-        subgraphs.update([frozenset([u,v,n1,n2]) for n1 in u_own_two_hop - v_own for n2 in u_own_two_hop_dict[n1]])
+        subgraphs.update(frozenset([u,v,n1,n2]) for n1 in u_own_two_hop - v_own for n2 in u_own_two_hop_dict[n1])
 
     if len(v_own_two_hop) > 0:
-        subgraphs.update([frozenset([u,v,n1,n2]) for n1 in v_own_two_hop - u_own for n2 in v_own_two_hop_dict[n1]])
+        subgraphs.update(frozenset([u,v,n1,n2]) for n1 in v_own_two_hop - u_own for n2 in v_own_two_hop_dict[n1])
 
 
     # type A3 new subgraphs
@@ -64,13 +64,13 @@ def addition_explore(graph, u, v, k=4):
 
     if len(u_own) > 1:
         # Type A1: wedge to star and triangle to kite
-        adds.update([frozenset([u,v,n1,n2]) for n1,n2 in combinations(u_own, 2)])
+        adds.update(frozenset([u,v,n1,n2]) for n1,n2 in combinations(u_own, 2))
 
     v_own = v_neighbors - one_hop_common
 
     if len(v_own) > 1:
         # Type A1: wedge to star and triangle to kite
-        adds.update([frozenset([u,v,n1,n2]) for n1,n2 in combinations(v_own, 2)])
+        adds.update(frozenset([u,v,n1,n2]) for n1,n2 in combinations(v_own, 2))
 
     # Case 3: One endpoint is the corner of a wedge, no overlap
     # Case 5: Edge completes a square
@@ -80,20 +80,20 @@ def addition_explore(graph, u, v, k=4):
 
     if len(u_own_two_hop) > 0:
         # Type A2: wedge to path
-        adds.update([frozenset([u,v,n1,n2]) for n1 in u_own_two_hop - v_own for n2 in u_own_two_hop_dict[n1]])
+        adds.update(frozenset([u,v,n1,n2]) for n1 in u_own_two_hop - v_own for n2 in u_own_two_hop_dict[n1])
 
         # Type R1: path to square
-        reps.update([frozenset([u,v,n1,n2]) for n1 in u_own_two_hop & v_own for n2 in u_own_two_hop_dict[n1]])
+        reps.update(frozenset([u,v,n1,n2]) for n1 in u_own_two_hop & v_own for n2 in u_own_two_hop_dict[n1])
 
     v_own_two_hop_dict = graph.two_hop_neighborhood(v, v_own)
     v_own_two_hop = set(v_own_two_hop_dict.keys())
 
     if len(v_own_two_hop) > 0:
         # Type A2: wedge to path
-        adds.update([frozenset([u,v,n1,n2]) for n1 in v_own_two_hop - u_own for n2 in v_own_two_hop_dict[n1]])
+        adds.update(frozenset([u,v,n1,n2]) for n1 in v_own_two_hop - u_own for n2 in v_own_two_hop_dict[n1])
 
         # Type R1: path to square
-        reps.update([frozenset([u,v,n1,n2]) for n1 in v_own_two_hop & u_own for n2 in v_own_two_hop_dict[n1]])
+        reps.update(frozenset([u,v,n1,n2]) for n1 in v_own_two_hop & u_own for n2 in v_own_two_hop_dict[n1])
 
     # Case 4: Both endpoints have a pair, no overlap
 
@@ -104,21 +104,21 @@ def addition_explore(graph, u, v, k=4):
     if len(one_hop_common) > 0:
         # Type R2: path to kite and kite to diamond
         if len(u_own) > 0:
-            reps.update([frozenset([u,v,n1,n2]) for n1,n2 in product(u_own, one_hop_common)])
+            reps.update(frozenset([u,v,n1,n2]) for n1,n2 in product(u_own, one_hop_common))
 
         if len(v_own) > 0:
-            reps.update([frozenset([u,v,n1,n2]) for n1,n2 in product(v_own, one_hop_common)])
+            reps.update(frozenset([u,v,n1,n2]) for n1,n2 in product(v_own, one_hop_common))
 
     two_hop_common_dict = graph.two_hop_neighborhood(u, one_hop_common, set([v]) | v_own)
 
     if len(two_hop_common_dict) > 0:
         # Type R3: star to kite
-        reps.update([frozenset([u,v,n1,n2]) for n1 in two_hop_common_dict for n2 in two_hop_common_dict[n1]])
+        reps.update(frozenset([u,v,n1,n2]) for n1 in two_hop_common_dict for n2 in two_hop_common_dict[n1])
 
     # 4-cliques
 
     if len(one_hop_common) > 1:
         # Type R4: square to diamond and diamond to clique
-        reps.update([frozenset([u,v,n1,n2]) for n1,n2 in combinations(one_hop_common, 2)])
+        reps.update(frozenset([u,v,n1,n2]) for n1,n2 in combinations(one_hop_common, 2))
 
     return adds, reps
