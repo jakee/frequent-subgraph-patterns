@@ -6,21 +6,11 @@ import time
 
 from graph.util import make_edge
 
+from util.random_graph import generate_labeled_graph
+
 from algorithms.incremental.exact_counting import IncrementalExactCountingAlgorithm
 from algorithms.incremental.naive_reservoir import IncrementalNaiveReservoirAlgorithm
 from algorithms.incremental.optimized_reservoir import IncerementalOptimizedReservoirAlgorithm
-
-
-def generate_labeled_graph(N, p, L, Q):
-    G = nx.fast_gnp_random_graph(N, p)
-
-    for node in G:
-        G.nodes[node]['label'] = np.random.randint(1, L+1)
-
-    for u, v in G.edges:
-        G.edges[u, v]['label'] = np.random.randint(1, Q+1)
-
-    return G
 
 
 def generate_micro_labeled_graph():
