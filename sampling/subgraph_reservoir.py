@@ -1,12 +1,14 @@
 import random
 
+from collections import defaultdict
+
 class SubgraphReservoir:
     subgraphs = None
     vertex_subgraphs = None
 
     def __init__(self):
         self.subgraphs = set()
-        self.vertex_subgraphs = {}
+        self.vertex_subgraphs = defaultdict(set)
 
 
     def __contains__(self, subgraph):
@@ -22,7 +24,7 @@ class SubgraphReservoir:
             self.subgraphs.add(subgraph)
 
             for u in subgraph.nodes:
-                self._add_vertex_subgraph(u, subgraph)
+                self.vertex_subgraphs[u].add(subgraph)
 
             return True
         else:
@@ -34,7 +36,7 @@ class SubgraphReservoir:
             self.subgraphs.remove(subgraph)
 
             for u in subgraph.nodes:
-                self._remove_vertex_subgraph(u, subgraph)
+                self.vertex_subgraphs[u].remove(subgraph)
 
             return True
         else:
@@ -42,23 +44,8 @@ class SubgraphReservoir:
 
 
     def get_common_subgraphs(self, u, v):
-        if (u in self.vertex_subgraphs) and (v in self.vertex_subgraphs):
-            return self.vertex_subgraphs[u] & self.vertex_subgraphs[v]
-        else:
-            return set()
+        return self.vertex_subgraphs[u] & self.vertex_subgraphs[v]
 
 
     def random(self):
         return random.choice(list(self.subgraphs))
-
-
-    def _add_vertex_subgraph(self, vertex, subgraph):
-        if vertex in self.vertex_subgraphs:
-            self.vertex_subgraphs[vertex].add(subgraph)
-        else:
-            self.vertex_subgraphs[vertex] = set([subgraph])
-
-
-    def _remove_vertex_subgraph(self, vertex, subgraph):
-        if vertex in self.vertex_subgraphs:
-            self.vertex_subgraphs[vertex].remove(subgraph)
