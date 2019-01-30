@@ -116,8 +116,11 @@ class SimpleGraph:
         # node pairs come out of combinations in sorted
         # order as the input iterable is in sorted order
         for U, V in combinations(sorted(nodes), 2):
-            if (U[0], V[0]) in self.edge_labels:
-                edges.append(make_edge(U, V, self.edge_labels[(U[0], V[0])]))
+            u, l_u = U
+            v, l_v = V
+            q_uv = self.edge_labels.get((u, v))
+            if q_uv != None:
+                edges.append(make_edge(u, l_u, v, l_v, q_uv))
 
         return edges
 

@@ -3,7 +3,6 @@ import networkx as nx
 import matplotlib.pyplot as plt
 
 import time
-from datetime import datetime, timedelta
 
 from graph.util import make_edge
 
@@ -53,7 +52,7 @@ def run_simulation(simulator, graph):
         u_label = graph.nodes[u]['label']
         v_label = graph.nodes[v]['label']
 
-        data.append(make_edge((u, u_label), (v, v_label), edge_label))
+        data.append(make_edge(u, u_label, v, v_label, edge_label))
 
     np.random.shuffle(data)
 
