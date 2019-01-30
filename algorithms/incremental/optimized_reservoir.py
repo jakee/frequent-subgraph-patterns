@@ -2,7 +2,7 @@ import random
 
 import numpy as np
 
-from collections import Counter
+from collections import Counter, defaultdict
 
 from datetime import datetime, timedelta
 
@@ -17,7 +17,6 @@ from sampling.skip_rs import SkipRS
 from algorithms.exploration.optimized_quadruplet import get_new_subgraphs
 
 from util.set import flatten
-from util.metrics import MetricStore
 
 class IncerementalOptimizedReservoirAlgorithm:
     k = None
@@ -32,7 +31,7 @@ class IncerementalOptimizedReservoirAlgorithm:
     metrics = None
 
 
-    def __init__(self, M, k=3):
+    def __init__(self, k, M):
         self.k = k
         self.M = M
         self.N = 0
@@ -42,15 +41,7 @@ class IncerementalOptimizedReservoirAlgorithm:
         self.patterns = Counter()
         self.reservoir = SubgraphReservoir()
         self.skip_rs = SkipRS(M)
-        self.metrics = MetricStore(
-            'edge_add_ms',
-            'subgraph_add_ms',
-            'subgraph_replace_ms',
-            'new_subgraph_count',
-            'included_subgraph_count',
-            'reservoir_full_bool',
-            'skiprs_treshold_bool'
-        )
+        self.metrics = defaultdict(list)
 
 
     def add_edge(self, edge):
@@ -110,13 +101,13 @@ class IncerementalOptimizedReservoirAlgorithm:
         e_add_end = datetime.now()
 
         ms = timedelta(microseconds=1)
-        self.metrics.record('edge_add_ms', (e_add_end - e_add_start) / ms)
-        self.metrics.record('subgraph_add_ms', (s_add_end - s_add_start) / ms)
-        self.metrics.record('subgraph_replace_ms', (s_rep_end - s_rep_start) / ms)
-        self.metrics.record('new_subgraph_count', W)
-        self.metrics.record('included_subgraph_count', I)
-        self.metrics.record('reservoir_full_bool', int(len(self.reservoir) >= self.M))
-        self.metrics.record('skiprs_treshold_bool', int(self.skip_rs.is_threshold_reached(self.N)))
+        self.metrics['edge_add_ms'].append((e_add_end - e_add_start) / ms)
+        self.metrics['subgraph_add_ms'].append((s_add_end - s_add_start) / ms)
+        self.metrics['subgraph_replace_ms'].append((s_rep_end - s_rep_start) / ms)
+        self.metrics['new_subgraph_count'].append(W)
+        self.metrics['included_subgraph_count'].append(I)
+        self.metrics['reservoir_full_bool'].append(int(len(self.reservoir) >= self.M))
+        self.metrics['skiprs_treshold_bool'].append(int(self.skip_rs.is_threshold_reached(self.N)))
 
         return True
 

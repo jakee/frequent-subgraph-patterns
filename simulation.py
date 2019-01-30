@@ -110,7 +110,7 @@ def main():
     nrs_reservoir_full = []
 
     for i in range(10):
-        sim = IncrementalNaiveReservoirAlgorithm(1529, k) #324938
+        sim = IncrementalNaiveReservoirAlgorithm(k, 1529) #324938
         duration = run_simulation(sim, graph)
 
         print("The simulation ran for", duration, "seconds.")
@@ -140,7 +140,7 @@ def main():
     ors_skip_thresh = []
 
     for i in range(10):
-        sim = IncerementalOptimizedReservoirAlgorithm(1529, k) #324938
+        sim = IncerementalOptimizedReservoirAlgorithm(k, 1529) #324938
         duration = run_simulation(sim, graph)
 
         print("The simulation ran for", duration, "seconds.")
