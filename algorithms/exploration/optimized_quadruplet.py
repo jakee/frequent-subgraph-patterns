@@ -1,6 +1,6 @@
 from itertools import combinations, product
 
-def get_new_subgraphs(graph, u, v, k=4):
+def get_new_subgraphs(graph, k, u, v):
     if k != 4:
         raise ValueError("this exploration algorithm only works for k = 4")
 
@@ -46,7 +46,7 @@ def get_new_subgraphs(graph, u, v, k=4):
 
 
 
-def addition_explore(graph, u, v, k=4):
+def get_all_subgraphs(graph, k, u, v):
     if k != 4:
         raise ValueError("this exploration algorithm only works for k = 4")
 

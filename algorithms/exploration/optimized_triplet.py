@@ -1,4 +1,4 @@
-def get_new_subgraphs(graph, u, v, k=3):
+def get_new_subgraphs(graph, k, u, v):
     if k != 3:
         raise ValueError("this exploration algorithm only works for k = 3")
 
@@ -8,7 +8,7 @@ def get_new_subgraphs(graph, u, v, k=3):
     return set(frozenset([u, v, w]) for w in (N_u ^ N_v))
 
 
-def addition_explore(graph, u, v, k=3):
+def get_all_subgraphs(graph, k, u, v):
     if k != 3:
         raise ValueError("this exploration algorithm only works for k = 3")
 

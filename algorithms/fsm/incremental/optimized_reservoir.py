@@ -1,47 +1,23 @@
 import random
 
-import numpy as np
-
-from collections import Counter, defaultdict
-
 from datetime import datetime, timedelta
+
+from ..reservoir import ReservoirAlgorithm
 
 from graph.simple_graph import SimpleGraph
 
 from subgraph.util import make_subgraph
 from subgraph.pattern import canonical_label
 
-from sampling.subgraph_reservoir import SubgraphReservoir
 from sampling.skip_rs import SkipRS
 
-from algorithms.exploration.optimized_quadruplet import get_new_subgraphs
-
-from util.set import flatten
-
-class IncerementalOptimizedReservoirAlgorithm:
-    k = None
-    M = None # reservoir size
-    N = None # number of subgraphs seen
-    s = None # number of surplus subgraps to skip this iteration
-
-    graph = None
-    patterns = None
-    reservoir = None
-    skip_rs = None
-    metrics = None
+class IncerementalOptimizedReservoirAlgorithm(ReservoirAlgorithm):
 
 
-    def __init__(self, k, M):
-        self.k = k
-        self.M = M
-        self.N = 0
+    def __init__(self, k=3, M=1000):
         self.s = 0
-
-        self.graph = SimpleGraph()
-        self.patterns = Counter()
-        self.reservoir = SubgraphReservoir()
         self.skip_rs = SkipRS(M)
-        self.metrics = defaultdict(list)
+        super().__init__(k=k, M=m)
 
 
     def add_edge(self, edge):
@@ -56,13 +32,13 @@ class IncerementalOptimizedReservoirAlgorithm:
         # replace update all existing subgraphs with u and v in the reservoir
         s_rep_start = datetime.now()
         for s in self.reservoir.get_common_subgraphs(u, v):
-            self.remove_subgraph_from_reservoir(s)
-            self.add_subgraph_to_reservoir(make_subgraph(s.nodes, s.edges+(edge,)))
+            self.remove_subgraph(s)
+            self.add_subgraph(make_subgraph(s.nodes, s.edges+(edge,)))
         s_rep_end = datetime.now()
 
         # find new subgraph candidates for the reservoir
         s_add_start = datetime.now()
-        subgraph_candidates = list(get_new_subgraphs(self.graph, u, v, self.k))
+        subgraph_candidates = self.get_new_subgraphs(u, v)
 
         W = len(subgraph_candidates)
         I = 0 # number of subgraph candidates to include in sample
@@ -83,7 +59,7 @@ class IncerementalOptimizedReservoirAlgorithm:
 
         # sample I subgraphs from the W candidates
         if I < W:
-            additions = random.sample(subgraph_candidates, I)
+            additions = random.sample(list(subgraph_candidates), I)
         else:
             additions = subgraph_candidates
 
@@ -91,7 +67,7 @@ class IncerementalOptimizedReservoirAlgorithm:
         for nodes in additions:
             edges = self.graph.get_induced_edges(nodes)
             subgraph = make_subgraph(nodes, edges+[edge])
-            self.add_subgraph(subgraph)
+            self.process_new_subgraph(subgraph)
 
         s_add_end = datetime.now()
 
@@ -112,18 +88,18 @@ class IncerementalOptimizedReservoirAlgorithm:
         return True
 
 
-    def add_subgraph(self, subgraph):
+    def process_new_subgraph(self, subgraph):
         if len(self.reservoir) >= self.M:
-            self.remove_subgraph_from_reservoir(self.reservoir.random())
+            self.remove_subgraph(self.reservoir.random())
 
-        self.add_subgraph_to_reservoir(subgraph)
+        self.add_subgraph(subgraph)
 
 
-    def add_subgraph_to_reservoir(self, subgraph):
+    def add_subgraph(self, subgraph):
         self.reservoir.add(subgraph)
         self.patterns.update([canonical_label(subgraph)])
 
 
-    def remove_subgraph_from_reservoir(self, subgraph):
+    def remove_subgraph(self, subgraph):
         self.reservoir.remove(subgraph)
         self.patterns.subtract([canonical_label(subgraph)])

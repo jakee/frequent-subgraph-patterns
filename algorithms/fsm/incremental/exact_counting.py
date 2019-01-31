@@ -1,31 +1,16 @@
-from collections import Counter, defaultdict
-
 from datetime import datetime, timedelta
 
-from graph.simple_graph import SimpleGraph
+from ..base import BaseAlgorithm
 
 from subgraph.util import make_subgraph
 from subgraph.pattern import canonical_label
 
-from util.set import flatten
 
-from algorithms.exploration.optimized_quadruplet import addition_explore
-
-class IncrementalExactCountingAlgorithm:
-    k = 0
-    graph = None
-    patterns = None
-    metrics = None
+class IncrementalExactCountingAlgorithm(BaseAlgorithm):
 
 
-    def __init__(self, k, *args):
-        # we use *args in order to make this class
-        # interchangeable with other Algorithms
-        # that take more arguments than just k
-        self.k = k
-        self.graph = SimpleGraph()
-        self.patterns = Counter()
-        self.metrics = defaultdict(list)
+    def __init__(self, k=3, **kwargs):
+        super().__init__(k=k)
 
 
     def add_edge(self, edge):
@@ -37,7 +22,7 @@ class IncrementalExactCountingAlgorithm:
         u = edge.get_u()
         v = edge.get_v()
 
-        additions, replacements = addition_explore(self.graph, u, v, self.k)
+        additions, replacements = self.get_all_subgraphs(u, v)
 
         for nodes in additions:
             # collect the induced subgraph after addition of edge

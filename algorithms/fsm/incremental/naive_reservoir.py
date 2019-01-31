@@ -1,39 +1,17 @@
 import numpy as np
 
-from collections import Counter, defaultdict
-
 from datetime import datetime, timedelta
 
-from graph.simple_graph import SimpleGraph
+from ..reservoir import ReservoirAlgorithm
 
 from subgraph.util import make_subgraph
 from subgraph.pattern import canonical_label
 
-from sampling.subgraph_reservoir import SubgraphReservoir
 
-from algorithms.exploration.optimized_quadruplet import get_new_subgraphs
+class IncrementalNaiveReservoirAlgorithm(ReservoirAlgorithm):
 
-from util.set import flatten
-
-class IncrementalNaiveReservoirAlgorithm:
-    k = None
-    M = None # reservoir size
-    N = None # number of subgraphs seen
-    graph = None
-    patterns = None
-    reservoir = None
-    metrics = None
-
-
-    def __init__(self, k, M):
-        self.k = k
-        self.M = M
-        self.N = 0
-
-        self.graph = SimpleGraph()
-        self.patterns = Counter()
-        self.reservoir = SubgraphReservoir()
-        self.metrics = defaultdict(list)
+    def __init__(self, k=3, M=1000):
+        super().__init__(k=k, M=M)
 
 
     def add_edge(self, edge):
@@ -54,15 +32,14 @@ class IncrementalNaiveReservoirAlgorithm:
 
         # find new subgraph candidates for the reservoir
         s_add_start = datetime.now()
-        additions = get_new_subgraphs(self.graph, u, v, self.k)
+        additions = self.get_new_subgraphs(u, v)
 
         # perform reservoir sampling for each new subgraph candidate
         I = 0
         for nodes in additions:
             edges = self.graph.get_induced_edges(nodes)
             subgraph = make_subgraph(nodes, edges+[edge])
-            if self.add_subgraph(subgraph):
-                I += 1
+            I += int(self.add_subgraph(subgraph))
         s_add_end = datetime.now()
 
         self.graph.add_edge(edge)
@@ -80,7 +57,7 @@ class IncrementalNaiveReservoirAlgorithm:
         return True
 
 
-    def add_subgraph(self, subgraph):
+    def process_new_subgraph(self, subgraph):
         self.N += 1
 
         success = False
@@ -97,11 +74,11 @@ class IncrementalNaiveReservoirAlgorithm:
         return success
 
 
-    def add_subgraph_to_reservoir(self, subgraph):
+    def add_subgraph(self, subgraph):
         self.reservoir.add(subgraph)
         self.patterns.update([canonical_label(subgraph)])
 
 
-    def remove_subgraph_from_reservoir(self, subgraph):
+    def remove_subgraph(self, subgraph):
         self.reservoir.remove(subgraph)
         self.patterns.subtract([canonical_label(subgraph)])

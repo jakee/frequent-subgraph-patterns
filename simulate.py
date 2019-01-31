@@ -9,9 +9,9 @@ from argparse import ArgumentParser, FileType
 
 from graph.util import make_edge
 
-from algorithms.incremental.exact_counting import IncrementalExactCountingAlgorithm
-from algorithms.incremental.naive_reservoir import IncrementalNaiveReservoirAlgorithm
-from algorithms.incremental.optimized_reservoir import IncerementalOptimizedReservoirAlgorithm
+from algorithms.fsm.incremental.exact_counting import IncrementalExactCountingAlgorithm
+from algorithms.fsm.incremental.naive_reservoir import IncrementalNaiveReservoirAlgorithm
+from algorithms.fsm.incremental.optimized_reservoir import IncerementalOptimizedReservoirAlgorithm
 
 ALGORITHMS = {
 
@@ -107,7 +107,7 @@ def main():
     run_metrics = defaultdict(list)
 
     for i in range(times):
-        simulator = Algorithm(k, M)
+        simulator = Algorithm(k=k, M=M)
         duration = run_simulation(simulator, edges)
 
         durations.append(duration)
