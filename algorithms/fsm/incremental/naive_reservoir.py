@@ -1,4 +1,4 @@
-import numpy as np
+import random
 
 from datetime import datetime, timedelta
 
@@ -25,9 +25,9 @@ class IncrementalNaiveReservoirAlgorithm(ReservoirAlgorithm):
 
         # replace update all existing subgraphs with u and v in the reservoir
         s_rep_start = datetime.now()
-        for s in self.reservoir.get_common_subgraphs(u, v):
-            self.remove_subgraph_from_reservoir(s)
-            self.add_subgraph_to_reservoir(make_subgraph(s.nodes, s.edges+(edge,)))
+        for subg in self.reservoir.get_common_subgraphs(u, v):
+            self.remove_subgraph(subg)
+            self.add_subgraph(make_subgraph(subg.nodes, subg.edges+(edge,)))
         s_rep_end = datetime.now()
 
         # find new subgraph candidates for the reservoir
@@ -64,12 +64,12 @@ class IncrementalNaiveReservoirAlgorithm(ReservoirAlgorithm):
 
         if len(self.reservoir) < self.M:
             success = True
-        elif np.random.rand() < (self.M / float(self.N)):
+        elif random.random() < (self.M / float(self.N)):
             success = True
-            self.remove_subgraph_from_reservoir(self.reservoir.random())
+            self.remove_subgraph(self.reservoir.random())
 
         if success:
-            self.add_subgraph_to_reservoir(subgraph)
+            self.add_subgraph(subgraph)
 
         return success
 

@@ -17,7 +17,7 @@ class IncerementalOptimizedReservoirAlgorithm(ReservoirAlgorithm):
     def __init__(self, k=3, M=1000):
         self.s = 0
         self.skip_rs = SkipRS(M)
-        super().__init__(k=k, M=m)
+        super().__init__(k=k, M=M)
 
 
     def add_edge(self, edge):
@@ -59,7 +59,7 @@ class IncerementalOptimizedReservoirAlgorithm(ReservoirAlgorithm):
 
         # sample I subgraphs from the W candidates
         if I < W:
-            additions = random.sample(list(subgraph_candidates), I)
+            additions = random.sample(subgraph_candidates, I)
         else:
             additions = subgraph_candidates
 

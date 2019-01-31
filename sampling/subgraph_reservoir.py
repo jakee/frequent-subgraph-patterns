@@ -48,4 +48,4 @@ class SubgraphReservoir:
 
 
     def random(self):
-        return random.choice(list(self.subgraphs))
+        return random.sample(self.subgraphs, 1)[0]
