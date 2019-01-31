@@ -8,9 +8,9 @@ from graph.util import make_edge
 
 from util.random_graph import generate_labeled_graph
 
-from algorithms.incremental.exact_counting import IncrementalExactCountingAlgorithm
-from algorithms.incremental.naive_reservoir import IncrementalNaiveReservoirAlgorithm
-from algorithms.incremental.optimized_reservoir import IncerementalOptimizedReservoirAlgorithm
+from algorithms.fsm.incremental.exact_counting import IncrementalExactCountingAlgorithm
+from algorithms.fsm.incremental.naive_reservoir import IncrementalNaiveReservoirAlgorithm
+from algorithms.fsm.incremental.optimized_reservoir import IncerementalOptimizedReservoirAlgorithm
 
 
 def generate_micro_labeled_graph():
@@ -59,7 +59,7 @@ def run_simulation(simulator, graph):
 def main():
     np.random.seed(42)
 
-    k = 4
+    k = 3
 
     N = 70
     p = 0.25
@@ -76,7 +76,7 @@ def main():
     ec_edge_add_durations = []
 
     for i in range(10):
-        sim = IncrementalExactCountingAlgorithm(k)
+        sim = IncrementalExactCountingAlgorithm(k=k)
         duration = run_simulation(sim, graph)
 
         print("The simulation ran for", duration, "seconds.")
@@ -84,7 +84,7 @@ def main():
         print("Total number of subgraphs in sample:", sum((+sim.patterns).values()))
 
         ec_sim_durations.append(duration)
-        ec_edge_add_durations.append(sim.metrics.extract('edge_add_ms'))
+        ec_edge_add_durations.append(sim.metrics['edge_add_ms'])
 
     print("The simulations ran for on avg.", np.mean(ec_sim_durations), "seconds.")
 
@@ -100,7 +100,7 @@ def main():
     nrs_reservoir_full = []
 
     for i in range(10):
-        sim = IncrementalNaiveReservoirAlgorithm(k, 1529) #324938
+        sim = IncrementalNaiveReservoirAlgorithm(k=k, M=1529) #324938
         duration = run_simulation(sim, graph)
 
         print("The simulation ran for", duration, "seconds.")
@@ -108,12 +108,12 @@ def main():
         print("Total number of subgraphs in sample:", sum((+sim.patterns).values()))
 
         nrs_sim_durations.append(duration)
-        nrs_edge_add_durations.append(sim.metrics.extract('edge_add_ms'))
-        nrs_a_durations.append(sim.metrics.extract('subgraph_add_ms'))
-        nrs_r_durations.append(sim.metrics.extract('subgraph_replace_ms'))
-        nrs_n_subgraphs.append(sim.metrics.extract('new_subgraph_count'))
-        nrs_i_subgraphs.append(sim.metrics.extract('included_subgraph_count'))
-        nrs_reservoir_full.append(sim.metrics.extract('reservoir_full_bool'))
+        nrs_edge_add_durations.append(sim.metrics['edge_add_ms'])
+        nrs_a_durations.append(sim.metrics['subgraph_add_ms'])
+        nrs_r_durations.append(sim.metrics['subgraph_replace_ms'])
+        nrs_n_subgraphs.append(sim.metrics['new_subgraph_count'])
+        nrs_i_subgraphs.append(sim.metrics['included_subgraph_count'])
+        nrs_reservoir_full.append(sim.metrics['reservoir_full_bool'])
 
     print("The simulations ran for on avg.", np.mean(nrs_sim_durations), "seconds.")
 
@@ -130,7 +130,7 @@ def main():
     ors_skip_thresh = []
 
     for i in range(10):
-        sim = IncerementalOptimizedReservoirAlgorithm(k, 1529) #324938
+        sim = IncerementalOptimizedReservoirAlgorithm(k=k, M=1529) #324938
         duration = run_simulation(sim, graph)
 
         print("The simulation ran for", duration, "seconds.")
@@ -138,13 +138,13 @@ def main():
         print("Total number of subgraphs in sample:", sum((+sim.patterns).values()))
 
         ors_sim_durations.append(duration)
-        ors_edge_add_durations.append(sim.metrics.extract('edge_add_ms'))
-        ors_a_durations.append(sim.metrics.extract('subgraph_add_ms'))
-        ors_r_durations.append(sim.metrics.extract('subgraph_replace_ms'))
-        ors_n_subgraphs.append(sim.metrics.extract('new_subgraph_count'))
-        ors_i_subgraphs.append(sim.metrics.extract('included_subgraph_count'))
-        ors_reservoir_full.append(sim.metrics.extract('reservoir_full_bool'))
-        ors_skip_thresh.append(sim.metrics.extract('skiprs_treshold_bool'))
+        ors_edge_add_durations.append(sim.metrics['edge_add_ms'])
+        ors_a_durations.append(sim.metrics['subgraph_add_ms'])
+        ors_r_durations.append(sim.metrics['subgraph_replace_ms'])
+        ors_n_subgraphs.append(sim.metrics['new_subgraph_count'])
+        ors_i_subgraphs.append(sim.metrics['included_subgraph_count'])
+        ors_reservoir_full.append(sim.metrics['reservoir_full_bool'])
+        ors_skip_thresh.append(sim.metrics['skiprs_treshold_bool'])
 
     print("\nThe simulations ran for on avg.", np.mean(ors_sim_durations), "seconds.")
 
