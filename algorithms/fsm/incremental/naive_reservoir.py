@@ -39,7 +39,7 @@ class IncrementalNaiveReservoirAlgorithm(ReservoirAlgorithm):
         for nodes in additions:
             edges = self.graph.get_induced_edges(nodes)
             subgraph = make_subgraph(nodes, edges+[edge])
-            I += int(self.add_subgraph(subgraph))
+            I += int(self.process_new_subgraph(subgraph))
         s_add_end = datetime.now()
 
         self.graph.add_edge(edge)
