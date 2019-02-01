@@ -1,3 +1,4 @@
+import os
 import csv
 
 import numpy as np
@@ -41,11 +42,21 @@ def main():
         default=2,
         help="number of edge labels Q (default 2)")
 
+    parser.add_argument('-d', '--dest', default=".", help="destination directory")
+
     args = vars(parser.parse_args())
 
-    graph = generate_labeled_graph(args['N'], args['p'], args['L'], args['Q'])
+    N = args['N']
+    p = args['p']
+    L = args['L']
+    Q = args['Q']
 
-    filename = 'graph.edg'
+    graph = generate_labeled_graph(N, p, L, Q)
+
+    filename = "N%d_p%d_L%d_Q%d_graph.edg" % (N, int(p * 100), L, Q)
+
+    if args['dest']:
+        filename = os.path.join(args['dest'], filename)
 
     with open(filename, 'w', encoding='utf-8') as f:
         edge_writer = csv.writer(f, delimiter=' ')
