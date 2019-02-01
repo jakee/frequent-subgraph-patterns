@@ -1,6 +1,7 @@
 import os
 import csv
 import time
+import uuid
 
 import numpy as np
 
@@ -85,6 +86,17 @@ def main():
     in_file = args['edge_file']
     output_dir = args['output_dir']
 
+    print("Running Frequent Subgraph Mining on an Evolving Graph", "\n")
+
+    print("PARAMETERS")
+    print("stream setting:", stream)
+    print("algorithm:     ", algo)
+    print("k:             ", k)
+    print("M:             ", M)
+    print("times:         ", times)
+    print("input graph:   ", in_file.name, "\n")
+
+
     Algorithm = ALGORITHMS[stream][algo]
 
     if (algo in ['naive', 'optimal']) and (M == None):
@@ -106,33 +118,61 @@ def main():
     durations = []
     run_metrics = defaultdict(list)
 
+    print("SIMULATIONS", "\n")
+
     for i in range(times):
+        print("Running simulation", i + 1, "...")
+
         simulator = Algorithm(k=k, M=M)
         duration = run_simulation(simulator, edges)
+
+        print("Done, run took", duration, "seconds.", "\n")
 
         durations.append(duration)
         for name, values in simulator.metrics.items():
             run_metrics[name].append(values)
 
-
-    # calculate avg run duration and means for each metric
     avg_duration = np.mean(durations)
 
+    print("Average duration of a run was", avg_duration, "seconds.", "\n")
+
+
+    # calculate means for each metric
     for name in run_metrics.keys():
         run_metrics[name] = np.mean(np.asarray(run_metrics[name]), axis=0)
 
 
-    # construct and write the csv file to output the collect metrics
-    out_file_path = os.path.join(output_dir, 'out.csv')
-    out_headers = sorted(run_metrics.keys())
+    # construct the output files for collected metrics and patterns
+    print ("OUTPUT")
 
-    with open(out_file_path, 'w', encoding='utf-8') as out_file:
-        out_writer = csv.writer(out_file, delimiter=' ')
+    identifier = uuid.uuid4()
 
-        out_writer.writerow(out_headers)
+    metrics_path = os.path.join(output_dir, "%s_metrics.csv" % (identifier))
+    metrics_headers = sorted(run_metrics.keys())
 
-        for row_values in zip(*[run_metrics[name] for name in out_headers]):
-            out_writer.writerow([float(x) for x in row_values])
+    with open(metrics_path, 'w', encoding='utf-8') as metrics_file:
+        metrics_writer = csv.writer(metrics_file, delimiter=' ')
+
+        metrics_writer.writerow(metrics_headers)
+
+        for row_values in zip(*[run_metrics[name] for name in metrics_headers]):
+            metrics_writer.writerow([float(x) for x in row_values])
+
+        print("metrics file:            ", metrics_file.name)
+
+
+    patterns_path = os.path.join(output_dir, "%s_patterns.csv" % (identifier))
+    patterns_headers = ["canonical_label", "count"]
+
+    with open(patterns_path, 'w', encoding='utf-8') as patterns_file:
+        patterns_writer = csv.writer(patterns_file, delimiter=' ')
+
+        patterns_writer.writerow(patterns_headers)
+
+        for pattern, count in (+simulator.patterns).items():
+            patterns_writer.writerow([pattern, count])
+
+        print("patterns file (last run):", patterns_file.name)
 
 
 if __name__ == '__main__':
