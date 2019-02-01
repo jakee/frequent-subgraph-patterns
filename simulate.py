@@ -134,7 +134,11 @@ def main():
 
     avg_duration = np.mean(durations)
 
-    print("Average duration of a run was", avg_duration, "seconds.", "\n")
+    patterns = +simulator.patterns
+
+    print("Average duration of a run was", avg_duration, "seconds.")
+    print("Last run detected", len(patterns.keys()), "different subgraph patterns.")
+    print("Last run detected", sum(patterns.values()), "different subgraphs.", "\n")
 
 
     # calculate means for each metric
@@ -169,7 +173,7 @@ def main():
 
         patterns_writer.writerow(patterns_headers)
 
-        for pattern, count in (+simulator.patterns).items():
+        for pattern, count in patterns.items():
             patterns_writer.writerow([pattern, count])
 
         print("patterns file (last run):", patterns_file.name)
