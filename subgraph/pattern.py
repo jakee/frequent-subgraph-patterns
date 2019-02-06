@@ -14,27 +14,24 @@ def canonical_label(graphlet):
         edge_labels[(u, v)] = label
         degrees.update([u, v])
 
-    nodes_by_dl = defaultdict(list)
+    # group nodes into initial partitions based with same degree and label
+    parts = defaultdict(list)
     vertex_labels = {}
 
     for vertex, label in nodes:
         vertex_labels[vertex] = label
         degree = degrees[vertex]
-        nodes_by_dl[(degree, label)].append(node)
+        parts[(degree, label)].append(vertex)
 
-    initial_setup = sorted([(d, len(ns), l) for (d, l), ns in nodes_by_dl.items()], reverse=True)
+    # sort partitions by degree, size, label in descending order
+    initial = sorted(((p[0], len(parts[p]), p[1]) for p in parts), reverse=True)
 
-    # initialize the vertex array and adjacency matrix
-    vertices = []
+    # initialize the vertex array
+    vertices = np.array([u for d, _, l in initial for u in parts[(d, l)]])
+
+    # initialize the adjacency matrix based on vertex array
     adj = np.zeros((len(nodes), len(nodes)), dtype=int)
 
-    # populate the vertex array
-    for degree, size, label in initial_setup:
-        vertices += [u for u, l in nodes_by_dl[(degree, label)]]
-
-    vertices = np.array(vertices)
-
-    # populate the adjacency matrix
     for i in range(len(vertices)):
         u = vertices[i]
 
@@ -50,7 +47,7 @@ def canonical_label(graphlet):
     start = 0
     end = 0
 
-    for degree, size, label in initial_setup:
+    for degree, size, label in initial:
 
         # if partition size is only one node, we can ignore it
 
