@@ -1,7 +1,7 @@
 import numpy as np
 
 from itertools import permutations
-from collections import Counter
+from collections import Counter, defaultdict
 
 
 def canonical_label(graphlet):
@@ -10,23 +10,16 @@ def canonical_label(graphlet):
     edge_labels = {}
     degrees = Counter()
 
-    for edge in edges:
-        u, v, label = edge
+    for u, v, label in edges:
         edge_labels[(u, v)] = label
         degrees.update([u, v])
 
-    nodes_by_dl = {}
+    nodes_by_dl = defaultdict(list)
     vertex_labels = {}
 
-    for node in nodes:
-        vertex, label = node
+    for vertex, label in nodes:
         vertex_labels[vertex] = label
-
         degree = degrees[vertex]
-
-        if (degree, label) not in nodes_by_dl:
-            nodes_by_dl[(degree, label)] = []
-
         nodes_by_dl[(degree, label)].append(node)
 
     initial_setup = sorted([(d, len(ns), l) for (d, l), ns in nodes_by_dl.items()], reverse=True)
@@ -37,7 +30,7 @@ def canonical_label(graphlet):
 
     # populate the vertex array
     for degree, size, label in initial_setup:
-        vertices += [ u for u, l in nodes_by_dl[(degree, label)]]
+        vertices += [u for u, l in nodes_by_dl[(degree, label)]]
 
     vertices = np.array(vertices)
 
@@ -58,11 +51,13 @@ def canonical_label(graphlet):
     end = 0
 
     for degree, size, label in initial_setup:
-        # if partition size is only one node
-        # we can simply ignore it
+
+        # if partition size is only one node, we can ignore it
+
+        # if partition contains more than one node,
+        # permutate until largest canonical label is found
+
         if size > 1:
-            # if partition contains more than one node,
-            # permutate until largest canonical label is found
             end = start + size
 
             indices = list(range(start, end))
@@ -77,12 +72,11 @@ def canonical_label(graphlet):
                 V = vertices.copy()
                 A = adj.copy()
 
-                # swap the vertices around in the copy of the
-                # vertex list
+                # modify copied vertex list to reflect current permutation
                 V[indices] = V[perm]
 
-                # swap the rows and columns in the copy of the
-                # adjacency matrix
+                # swap the rows and columns in copied adjacency matrix
+                # to reflect current permutation
                 A[indices, :] = A[perm, :]
                 A[:, indices] = A[:, perm]
 
@@ -93,8 +87,10 @@ def canonical_label(graphlet):
                     V_max = V
                     A_max = A
 
-                adj = A_max
-                vertices = V_max
+            # update adjacency matrix and vertex list to represent the
+            # permutation of this partition with the largest canonical label
+            adj = A_max
+            vertices = V_max
 
         start += size
 
