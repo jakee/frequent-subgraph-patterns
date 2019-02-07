@@ -9,7 +9,7 @@ class ReservoirAlgorithm(BaseAlgorithm, metaclass=ABCMeta):
     def __init__(self, M=None, **kwargs):
         self.M = M # reservoir size
         self.N = 0 # number of subgraphs encountered
-        self.reservoir = SubgraphReservoir()
+        self.reservoir = SubgraphReservoir(size=M)
 
         super().__init__(M=M, **kwargs)
 
