@@ -25,9 +25,11 @@ class IncrementalNaiveReservoirAlgorithm(ReservoirAlgorithm):
 
         # replace update all existing subgraphs with u and v in the reservoir
         s_rep_start = datetime.now()
-        for subg in self.reservoir.get_common_subgraphs(u, v):
-            self.remove_subgraph(subg)
-            self.add_subgraph(make_subgraph(subg.nodes, subg.edges+(edge,)))
+
+        for old_subg in self.reservoir.get_common_subgraphs(u, v):
+            new_subg = make_subgraph(old_subg.nodes, old_subg.edges + (edge,))
+            self.process_existing_subgraph(old_subg, new_subg)
+
         s_rep_end = datetime.now()
 
         # find new subgraph candidates for the reservoir
@@ -37,6 +39,7 @@ class IncrementalNaiveReservoirAlgorithm(ReservoirAlgorithm):
         # perform reservoir sampling for each new subgraph candidate
         I = 0
         for nodes in additions:
+            self.N += 1
             edges = self.graph.get_induced_edges(nodes)
             subgraph = make_subgraph(nodes, edges+[edge])
             I += int(self.process_new_subgraph(subgraph))
@@ -52,33 +55,29 @@ class IncrementalNaiveReservoirAlgorithm(ReservoirAlgorithm):
         self.metrics['subgraph_replace_ms'].append((s_rep_end - s_rep_start) / ms)
         self.metrics['new_subgraph_count'].append(len(additions))
         self.metrics['included_subgraph_count'].append(I)
-        self.metrics['reservoir_full_bool'].append(int(len(self.reservoir) >= self.M))
+        self.metrics['reservoir_full_bool'].append(int(self.reservoir.is_full()))
 
         return True
 
 
     def process_new_subgraph(self, subgraph):
-        self.N += 1
+        success, old_subgraph = self.reservoir.add(subgraph, N=self.N)
 
-        success = False
-
-        if len(self.reservoir) < self.M:
-            success = True
-        elif random.random() < (self.M / float(self.N)):
-            success = True
-            self.remove_subgraph(self.reservoir.random())
-
-        if success:
-            self.add_subgraph(subgraph)
+        if success: self.add_subgraph(subgraph)
+        if old_subgraph: self.remove_subgraph(old_subgraph)
 
         return success
 
 
+    def process_existing_subgraph(self, old_subgraph, new_subgraph):
+        self.reservoir.replace(old_subgraph, new_subgraph)
+        self.remove_subgraph(old_subgraph)
+        self.add_subgraph(new_subgraph)
+
+
     def add_subgraph(self, subgraph):
-        self.reservoir.add(subgraph)
-        self.patterns.update([canonical_label(subgraph)])
+        self.patterns[canonical_label(subgraph)] += 1
 
 
     def remove_subgraph(self, subgraph):
-        self.reservoir.remove(subgraph)
-        self.patterns.subtract([canonical_label(subgraph)])
+        self.patterns[canonical_label(subgraph)] -= 1
