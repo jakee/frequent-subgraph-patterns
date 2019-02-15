@@ -117,6 +117,7 @@ def main():
     # run simulations and collect the duration and metrics from each run
     durations = []
     run_metrics = defaultdict(list)
+    run_patterns = []
 
     print("SIMULATIONS", "\n")
 
@@ -132,9 +133,11 @@ def main():
         for name, values in simulator.metrics.items():
             run_metrics[name].append(values)
 
+        run_patterns.append(+simulator.patterns)
+
     avg_duration = np.mean(durations)
 
-    patterns = +simulator.patterns
+    patterns = run_patterns[-1]
 
     print("Average duration of a run was", avg_duration, "seconds.")
     print("Last run detected", len(patterns.keys()), "different subgraph patterns.")
@@ -162,21 +165,24 @@ def main():
         for row_values in zip(*[run_metrics[name] for name in metrics_headers]):
             metrics_writer.writerow([float(x) for x in row_values])
 
-        print("metrics file:            ", metrics_file.name)
+        print("metrics file: ", metrics_file.name)
 
 
     patterns_path = os.path.join(output_dir, "%s_patterns.csv" % (identifier))
-    patterns_headers = ["canonical_label", "count"]
+    patterns_headers = ["canonical_label"] + ["count_%d" % (i + 1) for i in range(times)]
+
+    canonical_labels = set.union(*(set(p) for p in run_patterns))
 
     with open(patterns_path, 'w', encoding='utf-8') as patterns_file:
         patterns_writer = csv.writer(patterns_file, delimiter=' ')
 
         patterns_writer.writerow(patterns_headers)
 
-        for pattern, count in patterns.items():
-            patterns_writer.writerow([pattern, count])
+        for c_label in canonical_labels:
+            counts = [p[c_label] for p in run_patterns]
+            patterns_writer.writerow([c_label, *counts])
 
-        print("patterns file (last run):", patterns_file.name)
+        print("patterns file:", patterns_file.name)
 
 
 if __name__ == '__main__':
