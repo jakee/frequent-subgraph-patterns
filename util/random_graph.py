@@ -7,8 +7,16 @@ import networkx as nx
 from argparse import ArgumentParser
 
 
-def generate_labeled_graph(N, p, L, Q):
-    G = nx.fast_gnp_random_graph(N, p)
+def label_graph(graph, L, Q):
+    """
+    Returns a copy of G with randomly labeled nodes and edges.
+
+    Copies the networkx.Graph G and assigns each node one of the
+    labels [1,...,L] and each edge one of the labels [1,...,Q]
+    uniformly at random.
+    """
+    G = graph.copy()
+
 
     for node in G:
         G.nodes[node]['label'] = np.random.randint(1, L+1)
@@ -20,7 +28,7 @@ def generate_labeled_graph(N, p, L, Q):
 
 
 def main():
-    parser = ArgumentParser(description="Generate a random labeled ER graph.")
+    parser = ArgumentParser(description="Generate a random labeled ER graphs.")
 
     parser.add_argument('N',
         type=int,
@@ -30,40 +38,52 @@ def main():
         type=float,
         help="probability p that an edge exists between any two nodes")
 
-    parser.add_argument('-l',
+    parser.add_argument('-l', '--nodelabels',
         dest='L',
+        nargs="+",
         type=int,
-        default=2,
-        help="number of node labels L (default 2)")
+        default=[2],
+        help="list of node label counts L (default [2])")
 
-    parser.add_argument('-q',
+    parser.add_argument('-q', '--edgelabels',
         dest='Q',
+        nargs="+",
         type=int,
-        default=2,
-        help="number of edge labels Q (default 2)")
+        default=[2],
+        help="list of edge label counts Q (default [2])")
 
     parser.add_argument('-d', '--dest', default=".", help="destination directory")
 
+    parser.add_argument('-n', '--name', default="ER", help="name for graph(s)")
+
     args = vars(parser.parse_args())
 
+    name = args['name']
     N = args['N']
     p = args['p']
-    L = args['L']
-    Q = args['Q']
+    Ls = args['L']
+    Qs = args['Q']
 
-    graph = generate_labeled_graph(N, p, L, Q)
+    if len(Ls) != len(Qs):
+        raise ValueError("the number of node and edge label counts does not match")
 
-    filename = "N%d_p%d_L%d_Q%d_graph.edg" % (N, int(p * 100), L, Q)
+    G = nx.fast_gnp_random_graph(N, p)
 
-    if args['dest']:
-        filename = os.path.join(args['dest'], filename)
+    for L, Q in zip(Ls, Qs):
 
-    with open(filename, 'w', encoding='utf-8') as f:
-        edge_writer = csv.writer(f, delimiter=' ')
-        for u, v, q_uv in graph.edges.data('label'):
-            l_u = graph.nodes[u]['label']
-            l_v = graph.nodes[v]['label']
-            edge_writer.writerow([u, l_u, v, l_v, q_uv])
+        graph = label_graph(G, L, Q)
+
+        filename = "%s_N%d_p%d_L%d_Q%d_graph.edg" % (name, N, int(p * 100), L, Q)
+
+        if args['dest']:
+            filename = os.path.join(args['dest'], filename)
+
+        with open(filename, 'w', encoding='utf-8') as f:
+            edge_writer = csv.writer(f, delimiter=' ')
+            for u, v, q_uv in graph.edges.data('label'):
+                l_u = graph.nodes[u]['label']
+                l_v = graph.nodes[v]['label']
+                edge_writer.writerow([u, l_u, v, l_v, q_uv])
 
 
 if __name__ == '__main__':
