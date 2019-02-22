@@ -15,13 +15,19 @@ import csv
 import math
 import pprint
 
+from collections import Counter
 from argparse import ArgumentParser, FileType
 
 
-def parse_patterns_file(patterns_file):
+def parse_patterns_file(patterns_file, runs):
+    patterns = [Counter() for i in range(runs)]
+
     with patterns_file as file:
         reader = csv.DictReader(file, delimiter=' ')
-        patterns = {row['canonical_label']: int(row['count']) for row in reader}
+
+        for row in reader:
+            for i in range(runs):
+                patterns[i][row['canonical_label']] = int(row['count_%d' % (i + 1)])
 
     return patterns
 
@@ -41,6 +47,9 @@ def precision(exact_patterns, sampled_patterns):
     exact_patterns = set(exact_patterns)
     sampled_patterns = set(sampled_patterns)
 
+    if len(sampled_patterns) == 0:
+        return int(len(exact_patterns) == 0)
+
     return len(exact_patterns & sampled_patterns) / float(len(sampled_patterns))
 
 
@@ -48,10 +57,13 @@ def recall(exact_patterns, sampled_patterns):
     exact_patterns = set(exact_patterns)
     sampled_patterns = set(sampled_patterns)
 
+    if len(exact_patterns) == 0:
+        return int(len(sampled_patterns) == 0)
+
     return len(exact_patterns & sampled_patterns) / float(len(exact_patterns))
 
 
-def average_relative_error(exact_patterns, sampled_patterns, T_k):
+def avg_relative_error(exact_patterns, sampled_patterns, T_k):
     are = 0
 
     for pattern in exact_patterns:
@@ -74,24 +86,52 @@ def main():
         type=FileType('r'),
         help="path to the file that contains reservoir sampling patterns")
 
+    parser.add_argument('T_k',
+        type=int,
+        help="number of unique subgraph patterns")
+
+    parser.add_argument('-t', '--tau',
+        type=float,
+        default=0.001,
+        help="coefficient to multiply frequency thresholds (default 0.001)")
+
+    parser.add_argument('-r', '--runs',
+        type=int,
+        default=5,
+        help="number of runs provided for reservoir sampling (default 5)")
+
     args = vars(parser.parse_args())
 
-    exact_pattern_counts = parse_patterns_file(args['exact_patterns_file'])
+    T_k = args['T_k']
+    runs = args['runs']
+    tau_coefficient = args['tau']
+
+    exact_pattern_counts = parse_patterns_file(args['exact_patterns_file'], 1)[0]
     exact_pattern_freqs = pattern_frequencies(exact_pattern_counts)
 
-    sampled_pattern_counts = parse_patterns_file(args['sampled_patterns_file'])
-    sampled_pattern_freqs = pattern_frequencies(sampled_pattern_counts)
+    sampled_pattern_counts = parse_patterns_file(args['sampled_patterns_file'], runs)
+    sampled_pattern_freqs = [pattern_frequencies(c) for c in sampled_pattern_counts]
 
-    for threshold in [0.2, 0.4, 0.7, 0.9, 1.0, 1.3]:
-        tau = threshold * 0.001
-        print("\nThreshold", threshold)
+    for threshold in [0.001, 0.01, 0.1, 0.2, 1, 2, 10]:
+        tau = threshold * tau_coefficient
+        print("\nThreshold", tau)
 
         exact_patterns = threshold_frequencies(exact_pattern_freqs, tau)
-        sampled_patterns = threshold_frequencies(sampled_pattern_freqs, tau)
 
-        print("ARE      :", average_relative_error(exact_patterns, sampled_patterns, 611))
-        print("precision:", precision(exact_patterns, sampled_patterns))
-        print("recall   :", recall(exact_patterns, sampled_patterns))
+        are = 0
+        prec = 0
+        rec = 0
+
+        for pattern_freqs in sampled_pattern_freqs:
+            sampled_patterns = threshold_frequencies(pattern_freqs, tau)
+
+            are += avg_relative_error(exact_patterns, sampled_patterns, T_k)
+            prec += precision(exact_patterns, sampled_patterns)
+            rec += recall(exact_patterns, sampled_patterns)
+
+        print("ARE      :", are / float(runs))
+        print("precision:", prec / float(runs))
+        print("recall   :", rec / float(runs))
 
 
 if __name__ == '__main__':
