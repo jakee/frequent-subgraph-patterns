@@ -52,11 +52,3 @@ class IncrementalExactCountingAlgorithm(BaseAlgorithm):
         self.metrics['new_subgraph_count'].append(len(additions))
 
         return True
-
-
-    def add_subgraph(self, subgraph):
-        self.patterns.update([canonical_label(subgraph)])
-
-
-    def remove_subgraph(self, subgraph):
-        self.patterns.subtract([canonical_label(subgraph)])

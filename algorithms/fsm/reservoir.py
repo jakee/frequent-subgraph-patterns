@@ -17,3 +17,14 @@ class ReservoirAlgorithm(BaseAlgorithm, metaclass=ABCMeta):
     @abstractmethod
     def process_new_subgraph(self, subgraph):
         pass
+
+
+    @abstractmethod
+    def process_old_subgraph(self, subgraph):
+        pass
+
+
+    def process_existing_subgraph(self, old_subgraph, new_subgraph):
+        self.reservoir.replace(old_subgraph, new_subgraph)
+        self.remove_subgraph(old_subgraph)
+        self.add_subgraph(new_subgraph)

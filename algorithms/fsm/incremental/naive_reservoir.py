@@ -67,17 +67,3 @@ class IncrementalNaiveReservoirAlgorithm(ReservoirAlgorithm):
         if old_subgraph: self.remove_subgraph(old_subgraph)
 
         return success
-
-
-    def process_existing_subgraph(self, old_subgraph, new_subgraph):
-        self.reservoir.replace(old_subgraph, new_subgraph)
-        self.remove_subgraph(old_subgraph)
-        self.add_subgraph(new_subgraph)
-
-
-    def add_subgraph(self, subgraph):
-        self.patterns[canonical_label(subgraph)] += 1
-
-
-    def remove_subgraph(self, subgraph):
-        self.patterns[canonical_label(subgraph)] -= 1

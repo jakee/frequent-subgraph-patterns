@@ -4,6 +4,8 @@ from collections import Counter, defaultdict
 
 from graph.simple_graph import SimpleGraph
 
+from subgraph.pattern import canonical_label
+
 from algorithms.exploration.util import (
     new_subgraphs_func,
     all_subgraphs_func)
@@ -29,10 +31,13 @@ class BaseAlgorithm(metaclass=ABCMeta):
 
 
     @abstractmethod
+    def remove_edge(self, edge):
+        pass
+
+
     def add_subgraph(self, subgraph):
-        pass
+        self.patterns[canonical_label(subgraph)] += 1
 
 
-    @abstractmethod
     def remove_subgraph(self, subgraph):
-        pass
+        self.patterns[canonical_label(subgraph)] -= 1
