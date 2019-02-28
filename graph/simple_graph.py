@@ -1,10 +1,9 @@
 from itertools import combinations, product
-from collections import deque
+from collections import defaultdict
 
 from graph.util import make_edge
 
 from util.set import flatten
-
 
 class SimpleGraph:
     adjacency_matrix = None
@@ -12,7 +11,7 @@ class SimpleGraph:
 
 
     def __init__(self):
-        self.adjacency_matrix = {}
+        self.adjacency_matrix = defaultdict(set)
         self.edge_labels = {}
 
 
@@ -20,30 +19,42 @@ class SimpleGraph:
         return (edge.u, edge.v) in self.edge_labels
 
 
-    def add_neighbor(self, U, V):
-        if U not in self.adjacency_matrix:
-            self.adjacency_matrix[U] = set()
+    def add_edge(self, edge):
+        """Add an edge to the graph."""
+        self._add_neighbor(edge.get_u(), edge.get_v())
+        self._add_edge_label(edge)
 
-        if V not in self.adjacency_matrix:
-            self.adjacency_matrix[V] = set()
 
+    def remove_edge(self, edge):
+        """Remova an edge from the graph."""
+        self._remove_neighbor(edge.get_u(), edge.get_v())
+        self._remove_edge_label(edge)
+
+
+    def _add_neighbor(self, U, V):
+        """Add U and V as neighbors to the adjacency matrix."""
         self.adjacency_matrix[U].add(V)
         self.adjacency_matrix[V].add(U)
 
 
-    def add_edge_label(self, edge):
+    def _remove_neighbor(self, U, V):
+        """Remove neighbor relationship of U and V from the adjacency matrix."""
+        self.adjacency_matrix[U].remove(V)
+        self.adjacency_matrix[V].remove(U)
+
+
+    def _add_edge_label(self, edge):
+        """Store the label corresponding to this edge."""
         self.edge_labels[(edge.u, edge.v)] = edge.label
 
 
-    def add_edge(self, edge):
-        U = edge.get_u()
-        V = edge.get_v()
-
-        self.add_neighbor(U, V)
-        self.add_edge_label(edge)
+    def _remove_edge_label(self, edge):
+        """Forget the label corresponding to this edge."""
+        del self.edge_labels[(edge.u, edge.v)]
 
 
     def neighbors(self, node):
+        """Retrieve all neighbors of a node."""
         if node in self.adjacency_matrix:
             return self.adjacency_matrix[node]
 
@@ -51,6 +62,8 @@ class SimpleGraph:
 
 
     def n_hop_neighborhood(self, source, n):
+        """Enumerate all n-hop neighborhoods originating from source node."""
+
         if n > 0:
             # DFS to enumerate obvious [1...n] -hop neighborhoods
             stack = [(source, set([source]))]
@@ -92,6 +105,7 @@ class SimpleGraph:
 
 
     def two_hop_neighborhood(self, source, through_nodes=None, exclude_nodes=set()):
+        """Enumerate all 2-hop neighborhoods originating from source node."""
         one_hop_nodes = self.neighbors(source)
         exclude_nodes = exclude_nodes | one_hop_nodes | set([source])
 
@@ -111,6 +125,7 @@ class SimpleGraph:
 
 
     def get_induced_edges(self, nodes):
+        """Retrieve the set of edges induced by a set of nodes."""
         edges = []
 
         # node pairs come out of combinations in sorted
