@@ -7,6 +7,12 @@ class SubgraphReservoir:
     vertex_subgraphs = None
 
     def __init__(self, size):
+        """
+        Initialize a new subgraph reservoir.
+
+        :param size: The maximum size of the reservoir.
+        :type size: int
+        """
         self.max_size = size
         self.subgraphs = []
         self.subgraph_indices = {}
@@ -14,7 +20,7 @@ class SubgraphReservoir:
 
 
     def __contains__(self, subgraph):
-        return subgraph in self.subgraphs
+        return subgraph in self.subgraph_indices
 
 
     def __len__(self):
@@ -22,14 +28,17 @@ class SubgraphReservoir:
 
 
     def is_full(self):
-        return len(self.subgraphs) >= self.max_size
+        """Checks if the reservoir has reached max_size."""
+        return len(self) >= self.max_size
 
 
     def add(self, subgraph, N=float('-inf')):
+        """Tries to add a subgraph to the resevoir."""
+
         success = False
         old_subgraph = None
 
-        if subgraph not in self.subgraph_indices:
+        if subgraph not in self:
 
             if self.is_full():
                 # the reservoir is full, so we replace an existing subgraph
@@ -41,7 +50,7 @@ class SubgraphReservoir:
 
             else:
                 # the reservoir is not full, so we add the new subgraph
-                idx = len(self.subgraphs)
+                idx = len(self)
                 self.subgraphs.append(subgraph)
 
                 self.subgraph_indices[subgraph] = idx
@@ -55,13 +64,18 @@ class SubgraphReservoir:
 
 
     def replace(self, old_subgraph, new_subgraph):
-        idx = self.subgraph_indices[old_subgraph]
-        del self.subgraph_indices[old_subgraph]
+        """Replaces old_subgraph with new_subgraph in the reservoir."""
 
+        # keep track of the index where this operation is happening
+        idx = self.subgraph_indices[old_subgraph]
+
+        # replace the old subgraph with new_subgraph in the data structures
+        del self.subgraph_indices[old_subgraph]
         self.subgraphs[idx] = new_subgraph
         self.subgraph_indices[new_subgraph] = idx
 
-        # change the subgraphs by vertex mapping only if necessary
+        # change the subgraphs by vertex mapping
+        # only change mapping for vertices if necessary
         old_nodes = set(old_subgraph.nodes)
         new_nodes = set(new_subgraph.nodes)
 
@@ -73,12 +87,25 @@ class SubgraphReservoir:
 
 
     def get_common_subgraphs(self, u, v):
+        """Get all subgraphs from the reservoir that contain the edge (u, v)."""
         common_indices = self.vertex_subgraphs[u] & self.vertex_subgraphs[v]
         return [self.subgraphs[idx] for idx in common_indices]
 
 
     def random(self, N=float('-inf')):
-        size = len(self.subgraphs)
+        """
+        Get a subgraph (or None) from the reservoir uniformly at random.
+
+        Returns a subgraph from the reservoir uniformly at random. If value of
+        parameter N exceeds the size of the reservoir M, we return a subgraph
+        with probability M/N and otherwise return None. If N < M, the method
+        always returns a random subgraph from the reservoir. 
+
+        :param N: population size N used to pick a subgraph at propability M/N
+        :type N: int, float
+        """
+
+        size = len(self)
         idx = np.random.randint(size if size > N else N)
 
         if idx < size:
