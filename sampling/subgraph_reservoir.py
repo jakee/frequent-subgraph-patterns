@@ -6,16 +6,18 @@ class SubgraphReservoir:
     subgraphs = None
     vertex_subgraphs = None
 
-    def __init__(self, size):
+    def __init__(self, max_size):
         """
         Initialize a new subgraph reservoir.
 
         :param size: The maximum size of the reservoir.
         :type size: int
         """
-        self.max_size = size
+        self.size = 0
+        self.max_size = max_size
         self.subgraphs = []
         self.subgraph_indices = {}
+        self.vacant_indices = []
         self.vertex_subgraphs = defaultdict(set)
 
 
@@ -24,12 +26,12 @@ class SubgraphReservoir:
 
 
     def __len__(self):
-        return len(self.subgraphs)
+        return self.size
 
 
     def is_full(self):
         """Checks if the reservoir has reached max_size."""
-        return len(self) >= self.max_size
+        return self.size >= self.max_size
 
 
     def add(self, subgraph, N=float('-inf')):
@@ -50,8 +52,16 @@ class SubgraphReservoir:
 
             else:
                 # the reservoir is not full, so we add the new subgraph
-                idx = len(self)
-                self.subgraphs.append(subgraph)
+
+                # determine where in the list the subgraph is added
+                # if there are vacant indices in the list, use them first
+                # otherwise append the subgraph to the end
+                if len(self.vacant_indices) > 0:
+                    idx = self.vacant_indices.pop()
+                    self.subgraphs[idx] = subgraph
+                else:
+                    idx = len(self)
+                    self.subgraphs.append(subgraph)
 
                 self.subgraph_indices[subgraph] = idx
 
@@ -59,6 +69,9 @@ class SubgraphReservoir:
                     self.vertex_subgraphs[u].add(idx)
 
                 success = True
+
+        if success and old_subgraph == None:
+            self.size += 1
 
         return success, old_subgraph
 
@@ -84,6 +97,26 @@ class SubgraphReservoir:
 
         for v in old_nodes - new_nodes:
             self.vertex_subgraphs[v].remove(idx)
+
+
+    def remove(self, subgraph):
+        """Removes subgraph from reservoir if possible."""
+
+        if subgraph in self:
+            idx = self.subgraph_indices[subgraph]
+
+            self.subgraphs[idx] = None
+            del self.subgraph_indices[subgraph]
+
+            for u in subgraph.nodes:
+                self.vertex_subgraphs[u].remove(idx)
+
+            self.vacant_indices.append(idx)
+            self.size -= 1
+
+            return True
+        else:
+            return False
 
 
     def get_common_subgraphs(self, u, v):
