@@ -67,3 +67,11 @@ class IncrementalNaiveReservoirAlgorithm(ReservoirAlgorithm):
         if old_subgraph: self.remove_subgraph(old_subgraph)
 
         return success
+
+
+    def process_old_subgraph(self, subgraph):
+        raise NotImplementedError()
+
+
+    def remove_edge(self, edge):
+        raise NotImplementedError()

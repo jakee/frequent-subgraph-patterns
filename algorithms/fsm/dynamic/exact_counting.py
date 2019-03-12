@@ -17,7 +17,7 @@ class DynamicExactCountingAlgorithm(IncrementalExactCountingAlgorithm):
         if edge not in self.graph:
             return False
 
-        self.graph.add_edge(edge)
+        self.graph.remove_edge(edge)
 
         e_add_start = datetime.now()
 

@@ -52,3 +52,7 @@ class IncrementalExactCountingAlgorithm(BaseAlgorithm):
         self.metrics['new_subgraph_count'].append(len(additions))
 
         return True
+
+
+    def remove_edge(self, edge):
+        pass
