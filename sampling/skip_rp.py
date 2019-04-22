@@ -20,19 +20,21 @@ def skip_records(n, N):
     :rtype: int
     """
 
-    V_prime = draw_V_prime(1 / float(n))
-
     threshold = n * ALPHA_INV
 
     S = N
 
-    if (n > 1):
-        if (threshold < N):
-            S, = algorithm_D(n, N, V_prime)
+    if n > 0:
+        V_prime = draw_V_prime(1 / float(n))
+
+        if (n > 1):
+            if (threshold < N):
+                S = algorithm_D(n, N, V_prime)
+            else:
+                S = algorithm_A(n, N)
         else:
-            S = algorithm_A(n, N)
-    elif (n == 1):
-        S = int(N * V_prime)
+            # the n == 1 special case
+            S = int(N * V_prime)
 
     return S
         
@@ -58,7 +60,7 @@ def algorithm_A(n, N):
 
 
 
-def algorithm_D(n, N, V_prime)
+def algorithm_D(n, N, V_prime):
     n_inv = 1 / float(n)
     n_min1_inv = 1 / float(n - 1)
 
@@ -99,9 +101,9 @@ def algorithm_D(n, N, V_prime)
             bottom -= 1
 
         if N / float(N - X) >= y1 * np.exp(np.log(y2) * n_min1_inv):
-            V_prime = draw_V_prime(n_min1_inv)
+            # V_prime = draw_V_prime(n_min1_inv)
             break
 
         V_prime = draw_V_prime(n_inv)
 
-    return S, V_prime
+    return S

@@ -30,14 +30,11 @@ class IncerementalOptimizedReservoirAlgorithm(ReservoirAlgorithm):
         v = edge.get_v()
 
         # replace update all existing subgraphs with u and v in the reservoir
-        s_rep_start = datetime.now()
         for old_subg in self.reservoir.get_common_subgraphs(u, v):
             new_subg = make_subgraph(old_subg.nodes, old_subg.edges + (edge,))
             self.process_existing_subgraph(old_subg, new_subg)
-        s_rep_end = datetime.now()
 
         # find new subgraph candidates for the reservoir
-        s_add_start = datetime.now()
         subgraph_candidates = self.get_new_subgraphs(u, v)
 
         W = len(subgraph_candidates)
@@ -69,19 +66,16 @@ class IncerementalOptimizedReservoirAlgorithm(ReservoirAlgorithm):
             subgraph = make_subgraph(nodes, edges+[edge])
             self.process_new_subgraph(subgraph)
 
-        s_add_end = datetime.now()
-
         self.graph.add_edge(edge)
         self.s -= W
 
         e_add_end = datetime.now()
 
         ms = timedelta(microseconds=1)
-        self.metrics['edge_add_ms'].append((e_add_end - e_add_start) / ms)
-        self.metrics['subgraph_add_ms'].append((s_add_end - s_add_start) / ms)
-        self.metrics['subgraph_replace_ms'].append((s_rep_end - s_rep_start) / ms)
-        self.metrics['new_subgraph_count'].append(W)
-        self.metrics['included_subgraph_count'].append(I)
+        self.metrics['edge_op'].append('add')
+        self.metrics['edge_op_ms'].append((e_add_end - e_add_start) / ms)
+        self.metrics['num_candidate_subgraphs'].append(W)
+        self.metrics['num_processed_subgraphs'].append(I)
         self.metrics['reservoir_full_bool'].append(int(self.reservoir.is_full()))
         self.metrics['skiprs_treshold_bool'].append(int(self.skip_rs.is_threshold_reached(self.N)))
 

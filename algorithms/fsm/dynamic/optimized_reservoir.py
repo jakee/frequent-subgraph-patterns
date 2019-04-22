@@ -6,14 +6,14 @@ from ..reservoir import ReservoirAlgorithm
 
 from graph.simple_graph import SimpleGraph
 
-from subgraph.util import make_subgraph
+from subgraph.util import make_subgraph, make_subgraph_edge
 from subgraph.pattern import canonical_label
 
 from sampling import skip_rp
 from sampling.skip_rs import SkipRS
 
 
-class IncerementalOptimizedReservoirAlgorithm(ReservoirAlgorithm):
+class DynamicOptimizedReservoirAlgorithm(ReservoirAlgorithm):
 
 
     def __init__(self, k=3, M=1000):
@@ -70,25 +70,24 @@ class IncerementalOptimizedReservoirAlgorithm(ReservoirAlgorithm):
 
         # RANDOM PAIRING STEP
 
-        if self.d > 0:
-            sum_rp = 0
+        sum_rp = 0
 
-            while (self.d > 0) and (sum_rp < W):
-                num_picked_subgraphs = 0
-                Z_rp = skip_rp.skip_records(self.c1, self.d)
+        while (self.d > 0) and (sum_rp < W):
+            num_picked_subgraphs = 0
+            Z_rp = skip_rp.skip_records(self.c1, self.d)
 
-                if sum_rp + Z_rp < W:
-                    num_picked_subgraphs = int(self.c1 > 0)
-                else:
-                    Z_rp = W - sum_rp
+            if sum_rp + Z_rp < W:
+                num_picked_subgraphs = int(self.c1 > 0)
+            else:
+                Z_rp = W - sum_rp
 
-                I += num_picked_subgraphs
-                self.c1 -= num_picked_subgraphs
-                self.c2 -= Z_rp
+            I += num_picked_subgraphs
+            self.c1 -= num_picked_subgraphs
+            self.c2 -= Z_rp
 
-                sum_rp += Z_rp + num_picked_subgraphs 
+            sum_rp += Z_rp + num_picked_subgraphs 
 
-            W -= sum_rp
+        W -= sum_rp
 
         # RANDOM SAMPLING STEP
 
@@ -99,8 +98,8 @@ class IncerementalOptimizedReservoirAlgorithm(ReservoirAlgorithm):
             self.N += Z_rs + 1
             self.s += Z_rs + 1
 
-        # sample I subgraphs from the W candidates
-        if I < W:
+        # sample I subgraphs from among the candidates
+        if I < len(subgraph_candidates):
             additions = random.sample(subgraph_candidates, I)
         else:
             additions = subgraph_candidates

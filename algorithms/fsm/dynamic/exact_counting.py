@@ -48,7 +48,8 @@ class DynamicExactCountingAlgorithm(IncrementalExactCountingAlgorithm):
 
         e_add_end = datetime.now()
         ms = timedelta(microseconds=1)
-        self.metrics['edge_remove_ms'].append((e_add_end - e_add_start) / ms)
-        self.metrics['removed_subgraph_count'].append(len(removals))
+        self.metrics['edge_op'].append('del')
+        self.metrics['edge_op_ms'].append((e_add_end - e_add_start) / ms)
+        self.metrics['num_processed_subgraphs'].append(len(removals))
 
         return True

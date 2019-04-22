@@ -48,8 +48,9 @@ class IncrementalExactCountingAlgorithm(BaseAlgorithm):
 
         e_add_end = datetime.now()
         ms = timedelta(microseconds=1)
-        self.metrics['edge_add_ms'].append((e_add_end - e_add_start) / ms)
-        self.metrics['new_subgraph_count'].append(len(additions))
+        self.metrics['edge_op'].append('add')
+        self.metrics['edge_op_ms'].append((e_add_end - e_add_start) / ms)
+        self.metrics['num_processed_subgraphs'].append(len(additions))
 
         return True
 

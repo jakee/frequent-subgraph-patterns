@@ -79,14 +79,17 @@ class DynamicNaiveReservoirAlgorithm(ReservoirAlgorithm):
         removals = self.get_new_subgraphs(u, v)
         D = len(removals)
 
-        old_c1 = self.c1
+        # we start compensating for subgraph deletions with variables c1 and c2
+        # after the reservoir has filled up once
+        compensate_for_removals = self.reservoir.is_full() or (self.c1 + self.c2) > 0
+        removals_from_sample = 0
 
         # find all subgraphs in the reservoir containing nodes u and v
         for old_subg in self.reservoir.get_common_subgraphs(u, v):
 
             if frozenset(old_subg.nodes) in removals:
                 # subgraph is no longer connected after edge removal, remove it
-                self.process_old_subgraph(old_subg)
+                removals_from_sample += int(self.process_old_subgraph(old_subg))
             else:
                 # subgraph stays connected after edge removal, replace it
                 old_edges = old_subg.edges
@@ -95,8 +98,9 @@ class DynamicNaiveReservoirAlgorithm(ReservoirAlgorithm):
                 self.process_existing_subgraph(old_subg, new_subg)
 
         # update the count of uncompensated deletions from outside the sample
-        removals_from_sample = self.c1 - old_c1
-        self.c2 += D - removals_from_sample
+        if compensate_for_removals:
+            self.c1 += removals_from_sample
+            self.c2 += D - removals_from_sample
 
         self.N -= D
 
@@ -138,4 +142,4 @@ class DynamicNaiveReservoirAlgorithm(ReservoirAlgorithm):
 
 
     def process_old_subgraph(self, subgraph):
-        if self.reservoir.remove(subgraph): self.c1 += 1
+        return self.reservoir.remove(subgraph)
