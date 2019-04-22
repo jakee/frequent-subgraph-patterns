@@ -6,6 +6,7 @@ import uuid
 import numpy as np
 import matplotlib.pyplot as plt
 
+from datetime import datetime, timedelta
 from collections import deque, defaultdict
 from argparse import ArgumentParser, FileType
 
@@ -23,6 +24,7 @@ from algorithms.fsm.incremental.optimized_reservoir import IncerementalOptimized
 
 from algorithms.fsm.dynamic.exact_counting import DynamicExactCountingAlgorithm
 from algorithms.fsm.dynamic.naive_reservoir import DynamicNaiveReservoirAlgorithm
+from algorithms.fsm.dynamic.optimized_reservoir import DynamicOptimizedReservoirAlgorithm
 
 ACCURACY_SAMPLE_INTERVAL = 10
 
@@ -37,16 +39,19 @@ ALGORITHMS = {
     'dynamic': {
         'exact': DynamicExactCountingAlgorithm,
         'naive': DynamicNaiveReservoirAlgorithm,
-        'optimal': None
+        'optimal': DynamicOptimizedReservoirAlgorithm
     }
 
 }
 
 
-def run_simulation(simulators, edges, window_size=0):
+def run_simulation(simulators, edges, T_k, window_size=0):
+    ms = timedelta(microseconds=1)
+
     np.random.shuffle(edges)
 
-    accuracy_metrics = defaultdict(list)
+    accuracy_metrics = defaultdict(lambda: defaultdict(list))
+    performance_metrics = defaultdict(list)
 
     if window_size > 0:
         sliding_window = deque()
@@ -54,38 +59,52 @@ def run_simulation(simulators, edges, window_size=0):
     start_time = time.time()
 
     for idx, edge_to_add in enumerate(edges):
-        simulators['exact'].add_edge(edge_to_add)
-        simulators['naive'].add_edge(edge_to_add)
+
+        edge_to_remove = None
 
         if window_size > 0:
             sliding_window.append(edge_to_add)
 
             if len(sliding_window) > window_size:
-                edge_to_remove = sliding_window.popleft()
-                simulators['exact'].remove_edge(edge_to_add)
-                simulators['naive'].remove_edge(edge_to_add)
+                    edge_to_remove = sliding_window.popleft()
+
+
+        for algorithm in ['exact', 'naive', 'optimal']:
+
+            edge_op_start = datetime.now()
+
+            simulators[algorithm].add_edge(edge_to_add)
+
+            if edge_to_remove != None:
+                simulators[algorithm].remove_edge(edge_to_remove)
+
+            edge_op_end = datetime.now()
+
+            performance_metrics[algorithm].append((edge_op_end - edge_op_start) / ms)
+
 
         if idx % ACCURACY_SAMPLE_INTERVAL == 0:
             exact_patterns = +simulators['exact'].patterns
-            naive_patterns = +simulators['naive'].patterns
-
             exact_freqs = pattern_frequencies(exact_patterns)
-            naive_freqs = pattern_frequencies(naive_patterns)
+            exact_t_freqs = threshold_frequencies(exact_freqs, 0.005)
 
-            exact_freqs = threshold_frequencies(exact_freqs, 0.005)
-            naive_freqs = threshold_frequencies(naive_freqs, 0.005)
+            for algo_type in ['naive', 'optimal']:
 
-            prec = precision(exact_freqs, naive_freqs)
-            rec = recall(exact_freqs, naive_freqs)
-            are = avg_relative_error(exact_freqs, naive_freqs, 40)
+                algo_patterns = +simulators[algo_type].patterns
+                algo_freqs = pattern_frequencies(algo_patterns)
+                algo_t_freqs = threshold_frequencies(algo_freqs, 0.005)
 
-            accuracy_metrics['precision'].append(prec)
-            accuracy_metrics['recall'].append(rec)
-            accuracy_metrics['avg_relative_error'].append(are)
+                prec = precision(exact_t_freqs, algo_t_freqs)
+                rec = recall(exact_t_freqs, algo_t_freqs)
+                are = avg_relative_error(exact_t_freqs, algo_t_freqs, T_k)
+
+                accuracy_metrics[algo_type]['precision'].append(prec)
+                accuracy_metrics[algo_type]['recall'].append(rec)
+                accuracy_metrics[algo_type]['avg_relative_error'].append(are)
 
     end_time = time.time()
 
-    return end_time - start_time, accuracy_metrics
+    return end_time - start_time, accuracy_metrics, performance_metrics
 
 
 def main():
@@ -109,14 +128,16 @@ def main():
         type=FileType('r'),
         help="path to the input graph edge file")
 
-    '''
     parser.add_argument('output_dir',
         help="path to the directory for output files")
-    '''
 
     parser.add_argument('reservoir_size',
         type=int,
         help="reservoir size required for naive and optimal algorithms")
+
+    parser.add_argument('T_k',
+        type=int,
+        help="number of possible k-node subgraph patterns")
 
     parser.add_argument('-t', '--times',
         type=int,
@@ -133,7 +154,9 @@ def main():
     k = args['k']
     #algo = args['algorithm']
     stream = args['stream_setting']
+    output_dir = args['output_dir']
     M = args['reservoir_size']
+    T_k = args['T_k']
     times = args['times']
     window_size = args['window_size']
 
@@ -147,21 +170,17 @@ def main():
     #print("algorithm:     ", algo)
     print("k:             ", k)
     print("M:             ", M)
+    print("T_k:           ", T_k)
     print("times:         ", times)
     print("window size:   ", window_size)
-    print("input graph:   ", in_file.name, "\n")
+    print("input graph:   ", in_file.name)
+    print("output dir:    ", output_dir, "\n")
 
 
     ExactAlgorithm = ALGORITHMS[stream]['exact']
     NaiveAlgorithm = ALGORITHMS[stream]['naive']
+    OptimizedAlgorithm = ALGORITHMS[stream]['optimal']
 
-    if ExactAlgorithm == None:
-        msg = "exact algorithm is not available for %s stream setting" % (stream)
-        raise NotImplementedError(msg)
-
-    if NaiveAlgorithm == None:
-        msg = "naive algorithm is not available for %s stream setting" % (stream)
-        raise NotImplementedError(msg)
 
     if window_size and stream != 'dynamic':
         msg = "sliding window is only used with %s stream setting" % (stream)
@@ -176,8 +195,8 @@ def main():
 
     # run simulations and collect the duration and metrics from each run
     durations = []
-    run_metrics = defaultdict(list)
     run_accuracy_metrics = []
+    run_performance_metrics = []
 
     print("SIMULATIONS", "\n")
 
@@ -186,47 +205,92 @@ def main():
 
         simulators = {
             'exact': ExactAlgorithm(k=k),
-            'naive': NaiveAlgorithm(k=k, M=M)
+            'naive': NaiveAlgorithm(k=k, M=M),
+            'optimal': OptimizedAlgorithm(k=k, M=M)
         }
 
-        duration, accuracy_metrics = run_simulation(simulators, edges, window_size)
+        duration, acc_metrics, perf_metrics = run_simulation(simulators, edges, T_k, window_size)
 
         print("Done, run took", duration, "seconds.", "\n")
 
-        durations.append(duration)
-        run_accuracy_metrics.append(accuracy_metrics)
+        durations.append(duration) 
+        run_accuracy_metrics.append(acc_metrics)
+        run_performance_metrics.append(perf_metrics)
 
 
     avg_duration = np.mean(durations)
 
-    print("Average duration of a run was", avg_duration, "seconds.")
+    print("Average duration of a run was", avg_duration, "seconds.", "\n")
 
+    ec_edge_op_durations = [x['exact'] for x in run_performance_metrics]
+    nrs_edge_op_durations = [x['naive'] for x in run_performance_metrics]
+    ors_edge_op_durations = [x['optimal'] for x in run_performance_metrics]
 
-    print("Plots of accuracy")
+    print("Average edge operation durations")
+    print("EC:  %d ms" % (np.mean(ec_edge_op_durations)))
+    print("NRS: %d ms" % (np.mean(nrs_edge_op_durations)))
+    print("ORS: %d ms" % (np.mean(ors_edge_op_durations)))
 
-    avg_precision = np.mean(np.asarray([d['precision'] for d in run_accuracy_metrics]), axis=0)
-    avg_recall = np.mean(np.asarray([d['recall'] for d in run_accuracy_metrics]), axis=0)
-    avg_are = np.mean(np.asarray([d['avg_relative_error'] for d in run_accuracy_metrics]), axis=0)
+    identifier = uuid.uuid4() # unique identifier for files
 
-    edge_add_points = [ACCURACY_SAMPLE_INTERVAL * i for i in range(1, len(avg_precision) + 1)]
+    print("Plots of performance")
+
+    perf_plot_path = os.path.join(output_dir, "%s_performance_plot.pdf" % (identifier))
+
+    x_values = np.arange(len(ec_edge_op_durations[0]))
+
+    ec_avg_edge_op_durations = np.mean(ec_edge_op_durations, axis=0)
+    nrs_avg_edge_op_durations = np.mean(nrs_edge_op_durations, axis=0)
+    ors_avg_edge_op_durations = np.mean(ors_edge_op_durations, axis=0)
 
     fig = plt.figure()
-    ax = fig.add_subplot(311)
+    ax = fig.add_subplot(111)
+    ax.plot(x_values, ec_avg_edge_op_durations, label="EC")
+    ax.plot(x_values, nrs_avg_edge_op_durations, label="NRS")
+    ax.plot(x_values, ors_avg_edge_op_durations, label="ORS")
+    ax.legend()
+    plt.title("edge op durations, k="+str(k))
+    plt.savefig(perf_plot_path)
 
-    ax.plot(edge_add_points, avg_precision)
-    plt.title("precision")
+    print("Saved figure to", perf_plot_path)
 
-    ax = fig.add_subplot(312)
 
-    ax.plot(edge_add_points, avg_recall)
-    plt.title("recall")
+    print("Plots of accuracy", "\n")
 
-    ax = fig.add_subplot(313)
+    for algo_type in ['naive', 'optimal']:
+        algo_acc_metrics = [d[algo_type] for d in run_accuracy_metrics]
 
-    ax.plot(edge_add_points, avg_are)
-    plt.title("average relative error")
+        avg_precision = np.mean([c['precision'] for c in algo_acc_metrics], axis=0)
+        avg_recall = np.mean([c['recall'] for c in algo_acc_metrics], axis=0)
+        avg_are = np.mean([c['avg_relative_error'] for c in algo_acc_metrics], axis=0)
 
-    plt.show()
+        x_values = [ACCURACY_SAMPLE_INTERVAL * i for i in range(1, len(avg_precision) + 1)]
+
+        fig = plt.figure()
+        ax = fig.add_subplot(311)
+
+        ax.plot(x_values, avg_precision)
+        plt.title("precision")
+
+        ax = fig.add_subplot(312)
+
+        ax.plot(x_values, avg_recall)
+        plt.title("recall")
+
+        ax = fig.add_subplot(313)
+
+        ax.plot(x_values, avg_are)
+        plt.title("average relative error")
+
+        fig.suptitle('%s fully dynamic algorithm performance' % (algo_type), fontsize=16)
+
+        plt.tight_layout()
+
+        acc_plot_path = os.path.join(output_dir, "%s_%s_vs_ec_accuracy_plot.pdf" % (identifier, algo_type))
+
+        plt.savefig(acc_plot_path)
+
+        print("Saved figure to", acc_plot_path)
 
 
 if __name__ == '__main__':
